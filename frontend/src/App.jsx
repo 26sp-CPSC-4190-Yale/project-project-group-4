@@ -7,7 +7,8 @@ function App() {
 
   useEffect(() => {
     // Reaching out to the Django API
-    fetch('http://127.0.0.1:8000/api/artwork/')
+    const baseUrl = import.meta.env.VITE_API_URL || 'http://127.0.0.1:8000';
+    fetch(`${baseUrl}/api/artwork/`)
       .then(response => {
         if (!response.ok) {
           throw new Error('Network response was not ok');
