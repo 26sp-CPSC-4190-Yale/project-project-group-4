@@ -2,12 +2,13 @@ import { useState, useEffect, useRef } from 'react'
 import { AuthProvider, useAuth } from './AuthContext'
 import Login from './Login'
 import Register from './Register'
+import LikedArt from './LikedArt'
 import './App.css'
 
 const BASE_URL = import.meta.env.VITE_API_URL || 'http://127.0.0.1:8000'
 const SWIPE_THRESHOLD = 80
 
-function Gallery() {
+function Gallery({ onShowLiked }) {
   const { user, token, logout } = useAuth()
   const [artworks, setArtworks] = useState([])
   const [currentIndex, setCurrentIndex] = useState(0)
@@ -116,6 +117,7 @@ function Gallery() {
   return (
     <div className="gallery-container">
       <div style={{ position: 'fixed', top: 12, right: 16, display: 'flex', alignItems: 'center', gap: 12, zIndex: 100 }}>
+        <button onClick={onShowLiked} style={{ cursor: 'pointer' }}>Liked</button>
         <span>{user.username}</span>
         <button onClick={logout} style={{ cursor: 'pointer' }}>Logout</button>
       </div>
@@ -196,10 +198,15 @@ function Gallery() {
 function AuthGate() {
   const { token } = useAuth()
   const [showRegister, setShowRegister] = useState(false)
+  const [view, setView] = useState('gallery')
 
-  if (token) return <Gallery />
-  if (showRegister) return <Register onSwitch={() => setShowRegister(false)} />
-  return <Login onSwitch={() => setShowRegister(true)} />
+  if (!token) {
+    if (showRegister) return <Register onSwitch={() => setShowRegister(false)} />
+    return <Login onSwitch={() => setShowRegister(true)} />
+  }
+
+  if (view === 'liked') return <LikedArt onBack={() => setView('gallery')} />
+  return <Gallery onShowLiked={() => setView('liked')} />
 }
 
 export default function App() {

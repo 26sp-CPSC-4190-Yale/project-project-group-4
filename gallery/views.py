@@ -100,6 +100,30 @@ def artwork_detail(request, artwork_id):
     return Response(serializer.data)
 
 @api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def liked_artworks(request):
+    """Return artworks the current user has liked, paginated."""
+    limit = int(request.query_params.get('limit', 20))
+    offset = int(request.query_params.get('offset', 0))
+
+    interactions = Interaction.objects.filter(
+        user=request.user, action='like'
+    ).select_related('artwork').order_by('-timestamp')
+
+    total = interactions.count()
+    page = interactions[offset:offset + limit]
+    artworks = [i.artwork for i in page]
+
+    serializer = ArtworkSerializer(artworks, many=True)
+    return Response({
+        'count': total,
+        'limit': limit,
+        'offset': offset,
+        'results': serializer.data,
+    })
+
+
+@api_view(['GET'])
 def artwork_list(request):
     """
     Get random artworks, excluding IDs the client has already seen this session.
