@@ -1,5 +1,17 @@
 from rest_framework import serializers
+from django.contrib.auth.models import User
 from .models import Artwork, Interaction
+
+
+class UserSerializer(serializers.ModelSerializer):
+    password = serializers.CharField(write_only=True, min_length=8)
+
+    class Meta:
+        model = User
+        fields = ['id', 'username', 'email', 'password']
+
+    def create(self, validated_data):
+        return User.objects.create_user(**validated_data)
 
 class ArtworkSerializer(serializers.ModelSerializer):
     """Basic artwork serializer for list views."""
