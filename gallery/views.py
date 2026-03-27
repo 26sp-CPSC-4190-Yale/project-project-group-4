@@ -102,15 +102,21 @@ def artwork_detail(request, artwork_id):
 @api_view(['GET'])
 def artwork_list(request):
     """
-    Get all artworks (paginated).
+    Get all artworks (paginated), excluding ones the user has already interacted with.
     """
     limit = int(request.query_params.get('limit', 20))
     offset = int(request.query_params.get('offset', 0))
-    
-    artworks = Artwork.objects.all()[offset:offset+limit]
+
+    qs = Artwork.objects.all()
+    if request.user.is_authenticated:
+        seen_ids = Interaction.objects.filter(user=request.user).values_list('artwork_id', flat=True)
+        qs = qs.exclude(id__in=seen_ids)
+
+    total = qs.count()
+    artworks = qs[offset:offset+limit]
     serializer = ArtworkSerializer(artworks, many=True)
     return Response({
-        'count': Artwork.objects.count(),
+        'count': total,
         'limit': limit,
         'offset': offset,
         'results': serializer.data
