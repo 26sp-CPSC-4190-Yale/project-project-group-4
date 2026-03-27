@@ -16,22 +16,26 @@ function Gallery() {
   const [dragging, setDragging] = useState(false)
   const startXRef = useRef(null)
   const isFetchingRef = useRef(false)
-  const offsetRef = useRef(0)
-  const totalRef = useRef(null)
+  const seenIdsRef = useRef(new Set())
+  const noMoreRef = useRef(false)
 
   async function fetchMore() {
-    if (isFetchingRef.current) return
-    if (totalRef.current !== null && offsetRef.current >= totalRef.current) return
+    if (isFetchingRef.current || noMoreRef.current) return
     isFetchingRef.current = true
     try {
-      const r = await fetch(`${BASE_URL}/api/artworks/?limit=20&offset=${offsetRef.current}`, {
+      const exclude = [...seenIdsRef.current].join(',')
+      const params = `limit=20${exclude ? `&exclude=${exclude}` : ''}`
+      const r = await fetch(`${BASE_URL}/api/artworks/?${params}`, {
         headers: { Authorization: `Token ${token}` },
       })
       if (!r.ok) throw new Error()
       const data = await r.json()
-      setArtworks(prev => [...prev, ...data.results])
-      totalRef.current = data.count
-      offsetRef.current += data.results.length
+      if (data.results.length === 0) {
+        noMoreRef.current = true
+      } else {
+        data.results.forEach(a => seenIdsRef.current.add(a.id))
+        setArtworks(prev => [...prev, ...data.results])
+      }
     } catch {
       setError('Failed to load artworks. Is Django running?')
     } finally {
