@@ -52,7 +52,7 @@ export function AuthProvider({ children }) {
         method: 'POST',
         headers: { Authorization: `Token ${token}` },
       })
-    } catch (_) {}
+    } catch { /* server logout is best-effort */ }
     localStorage.removeItem('token')
     localStorage.removeItem('user')
     setToken(null)
