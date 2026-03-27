@@ -13,13 +13,12 @@ export default function Gallery() {
   const seenIdsRef = useRef(new Set())
   const noMoreRef = useRef(false)
 
-  // Swipe handler: record the interaction, then advance to next card
+  // Swipe callback: runs after the exit animation completes
   const { flipped, likeOpacity, passOpacity, cardProps, handleSwipe } = useSwipe(
     direction => {
       const artwork = artworks[currentIndex]
-      const action = direction === 'right' ? 'like' : 'pass'
-      recordInteraction(artwork.id, action)
-      setTimeout(() => setCurrentIndex(i => i + 1), 0)
+      recordInteraction(artwork.id, direction === 'right' ? 'like' : 'pass')
+      setCurrentIndex(i => i + 1)
     }
   )
 

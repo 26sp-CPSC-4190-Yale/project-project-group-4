@@ -16,9 +16,9 @@ export default function useSwipe(onSwipe) {
 
   function handleSwipe(direction) {
     if (exiting) return
-    onSwipe(direction)
     setExiting(direction)
     setTimeout(() => {
+      onSwipe(direction)
       setExiting(null)
       setDragX(0)
       setFlipped(false)
