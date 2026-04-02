@@ -18,4 +18,7 @@ urlpatterns = [
 
     # Record a like/pass interaction (requires auth)
     path('api/interactions/', views.record_interaction, name='record_interaction'),
+
+    # Get current user's liked artworks (requires auth)
+    path('api/liked/', views.liked_artworks, name='liked_artworks'),
 ]

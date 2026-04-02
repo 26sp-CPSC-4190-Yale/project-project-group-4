@@ -22,43 +22,44 @@ export default function Login({ onSwitch }) {
   }
 
   return (
-    <div style={styles.container}>
-      <h2>Login</h2>
-      <form onSubmit={handleSubmit} style={styles.form}>
-        <input
-          style={styles.input}
-          type="text"
-          placeholder="Username"
-          value={username}
-          onChange={e => setUsername(e.target.value)}
-          required
-        />
-        <input
-          style={styles.input}
-          type="password"
-          placeholder="Password"
-          value={password}
-          onChange={e => setPassword(e.target.value)}
-          required
-        />
-        {error && <p style={styles.error}>{error}</p>}
-        <button style={styles.button} type="submit" disabled={loading}>
-          {loading ? 'Logging in…' : 'Login'}
-        </button>
-      </form>
-      <p>
-        Don't have an account?{' '}
-        <button style={styles.link} onClick={onSwitch}>Register</button>
-      </p>
+    <div className="auth-page">
+      <div className="auth-wrapper">
+        <div className="auth-branding">
+          <h1>YArt Match</h1>
+          <p>Discover art, one swipe at a time</p>
+        </div>
+
+        <div className="auth-card">
+          <h2>Log in</h2>
+          <form onSubmit={handleSubmit} className="auth-form">
+            <input
+              className="auth-input"
+              type="text"
+              placeholder="Username"
+              value={username}
+              onChange={e => setUsername(e.target.value)}
+              required
+            />
+            <input
+              className="auth-input"
+              type="password"
+              placeholder="Password"
+              value={password}
+              onChange={e => setPassword(e.target.value)}
+              required
+            />
+            {error && <p className="auth-error">{error}</p>}
+            <button className="auth-submit" type="submit" disabled={loading}>
+              {loading ? 'Logging in...' : 'Log in'}
+            </button>
+          </form>
+        </div>
+
+        <p className="auth-switch">
+          Don't have an account?{' '}
+          <button onClick={onSwitch}>Register</button>
+        </p>
+      </div>
     </div>
   )
-}
-
-const styles = {
-  container: { maxWidth: 360, margin: '80px auto', padding: 24, border: '1px solid #ccc', borderRadius: 8 },
-  form: { display: 'flex', flexDirection: 'column', gap: 12 },
-  input: { padding: '8px 12px', fontSize: 14, borderRadius: 4, border: '1px solid #ccc' },
-  button: { padding: '10px 0', fontSize: 14, background: '#333', color: '#fff', border: 'none', borderRadius: 4, cursor: 'pointer' },
-  error: { color: 'red', margin: 0, fontSize: 13 },
-  link: { background: 'none', border: 'none', color: '#0066cc', cursor: 'pointer', textDecoration: 'underline', padding: 0, fontSize: 'inherit' },
 }
