@@ -78,8 +78,7 @@ export default function Gallery() {
 
       {artwork ? (
         <>
-          {!imageReady && <p className="status-message">Loading artworks...</p>}
-          <div className="card-container" style={{ visibility: imageReady ? 'visible' : 'hidden' }}>
+          <div className="card-container">
             <div className="card" {...cardProps}>
               <div className="swipe-label swipe-label-like" style={{ opacity: likeOpacity }}>
                 LIKE
@@ -100,6 +99,7 @@ export default function Gallery() {
                     alt={artwork.label}
                     onLoad={() => setImageReady(true)}
                     onError={skipCurrentArtwork}
+                    style={{ opacity: imageReady ? 1 : 0, transition: 'opacity 0.3s ease' }}
                     draggable={false}
                   />
                   <div className="card-gradient">
@@ -131,22 +131,18 @@ export default function Gallery() {
             </div>
           </div>
 
-          {imageReady && (
-            <>
-              <div className="action-buttons">
-                <button className="action-btn action-btn-pass" onClick={() => handleSwipe('left')}>
-                  ✕
-                </button>
-                <button className="action-btn action-btn-like" onClick={() => handleSwipe('right')}>
-                  ♥
-                </button>
-              </div>
+          <div className="action-buttons">
+            <button className="action-btn action-btn-pass" onClick={() => handleSwipe('left')}>
+              ✕
+            </button>
+            <button className="action-btn action-btn-like" onClick={() => handleSwipe('right')}>
+              ♥
+            </button>
+          </div>
 
-              <p className="gallery-counter">
-                {currentIndex + 1} viewed
-              </p>
-            </>
-          )}
+          <p className="gallery-counter">
+            {currentIndex + 1} viewed
+          </p>
         </>
       ) : !error && artworks.length === 0 ? (
         <p className="status-message">Loading artworks...</p>
