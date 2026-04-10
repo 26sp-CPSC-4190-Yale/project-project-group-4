@@ -7,8 +7,9 @@ from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
 from rest_framework import status
 from rest_framework.authtoken.models import Token
-from .models import Artwork, Interaction
+from .models import Artwork, Interaction, TasteSignal
 from .serializers import ArtworkSerializer, ArtworkDetailSerializer, UserSerializer
+from .taste import update_taste_signals, check_matches, MATCH_CHECK_INTERVAL
 
 
 @api_view(['POST'])
@@ -47,7 +48,7 @@ def logout(request):
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
 def record_interaction(request):
-    """Record a like or pass for an artwork."""
+    """Record a like or pass for an artwork, update taste signals, and check for matches."""
     artwork_id = request.data.get('artwork_id')
     action = request.data.get('action')
 
@@ -59,11 +60,29 @@ def record_interaction(request):
     except Artwork.DoesNotExist:
         return Response({'error': f'Artwork {artwork_id} not found'}, status=status.HTTP_404_NOT_FOUND)
 
-    interaction, created = Interaction.objects.update_or_create(
+    # Use get_or_create so we can detect re-swipes and diff the action
+    interaction, created = Interaction.objects.get_or_create(
         user=request.user,
         artwork=artwork,
         defaults={'action': action},
     )
+
+    if created:
+        update_taste_signals(request.user, artwork, action)
+    else:
+        old_action = interaction.action
+        if old_action != action:
+            # Re-swipe: undo old signals, apply new ones
+            update_taste_signals(request.user, artwork, old_action, undo=True)
+            update_taste_signals(request.user, artwork, action)
+            interaction.action = action
+            interaction.save()
+
+    # Check for matches every N swipes
+    total_swipes = Interaction.objects.filter(user=request.user).count()
+    if total_swipes % MATCH_CHECK_INTERVAL == 0:
+        check_matches(request.user)
+
     return Response(
         {'artwork_id': artwork_id, 'action': action, 'created': created},
         status=status.HTTP_201_CREATED if created else status.HTTP_200_OK,
@@ -143,3 +162,25 @@ def artwork_list(request):
         'count': total,
         'results': serializer.data
     })
+
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def my_taste(request):
+    """Return the current user's top taste signals for debugging / profile display."""
+    signals = (
+        TasteSignal.objects
+        .filter(user=request.user)
+        .order_by('-score')[:20]
+    )
+    data = [
+        {
+            'facet': s.facet,
+            'value': s.value,
+            'score': round(s.score, 3),
+            'likes': s.like_count,
+            'passes': s.pass_count,
+        }
+        for s in signals
+    ]
+    return Response({'signals': data})

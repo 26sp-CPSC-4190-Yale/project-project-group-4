@@ -21,4 +21,7 @@ urlpatterns = [
 
     # Get current user's liked artworks (requires auth)
     path('api/liked/', views.liked_artworks, name='liked_artworks'),
+
+    # Taste profile (requires auth)
+    path('api/taste/me/', views.my_taste, name='my_taste'),
 ]

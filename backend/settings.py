@@ -128,7 +128,6 @@ USE_TZ = True
 STATIC_URL = "static/"
 
 
-# TODO: Remove for production
 CORS_ALLOWED_ORIGINS = os.getenv("CORS_ALLOWED_ORIGINS", "http://localhost:5173").split(",")
 
 REST_FRAMEWORK = {
