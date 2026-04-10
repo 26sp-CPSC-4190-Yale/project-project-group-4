@@ -7,7 +7,7 @@ from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
 from rest_framework import status
 from rest_framework.authtoken.models import Token
-from .models import Artwork, Interaction, TasteSignal, Message
+from .models import Artwork, Interaction, Match, Message, TasteSignal
 from .serializers import ArtworkSerializer, ArtworkDetailSerializer, UserSerializer, MessageSerializer
 from .taste import update_taste_signals, check_matches, MATCH_CHECK_INTERVAL
 
@@ -142,11 +142,22 @@ def liked_artworks(request):
     })
 
 
+def _get_matched_user_ids(user):
+    """Return the set of user IDs that the given user has matched with."""
+    from django.db.models import Q
+    matches = Match.objects.filter(Q(user1=user) | Q(user2=user)).values_list('user1_id', 'user2_id')
+    ids = set()
+    for u1, u2 in matches:
+        ids.add(u1 if u2 == user.id else u2)
+    return ids
+
+
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def user_list(request):
-    """Return all users except the current user."""
-    users = User.objects.exclude(id=request.user.id).values('id', 'username')
+    """Return users the current user has matched with."""
+    matched_ids = _get_matched_user_ids(request.user)
+    users = User.objects.filter(id__in=matched_ids).values('id', 'username')
     return Response(list(users))
 
 
@@ -158,6 +169,9 @@ def conversation(request, user_id):
         other_user = User.objects.get(id=user_id)
     except User.DoesNotExist:
         return Response({'error': 'User not found'}, status=status.HTTP_404_NOT_FOUND)
+
+    if user_id not in _get_matched_user_ids(request.user):
+        return Response({'error': 'You are not matched with this user'}, status=status.HTTP_403_FORBIDDEN)
 
     if request.method == 'GET':
         messages = Message.objects.filter(
