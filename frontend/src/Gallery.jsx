@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react'
 import { useAuth } from './AuthContext'
 import useSwipe from './useSwipe'
-import { BASE_URL, FALLBACK_IMAGE } from './constants'
+import { BASE_URL } from './constants'
 
 export default function Gallery() {
   const { token } = useAuth()
@@ -9,6 +9,7 @@ export default function Gallery() {
   const [currentIndex, setCurrentIndex] = useState(0)
   const [error, setError] = useState(null)
 
+  const [imageReady, setImageReady] = useState(false)
   const isFetchingRef = useRef(false)
   const seenIdsRef = useRef(new Set())
   const noMoreRef = useRef(false)
@@ -62,6 +63,13 @@ export default function Gallery() {
     if (artworks.length > 0 && currentIndex >= artworks.length - 5) fetchMore()
   }, [currentIndex, artworks.length])
 
+  // Reset image readiness when moving to a new card
+  useEffect(() => { setImageReady(false) }, [currentIndex])
+
+  function skipCurrentArtwork() {
+    setCurrentIndex(i => i + 1)
+  }
+
   const artwork = artworks[currentIndex]
 
   return (
@@ -70,7 +78,8 @@ export default function Gallery() {
 
       {artwork ? (
         <>
-          <div className="card-container">
+          {!imageReady && <p className="status-message">Loading artworks...</p>}
+          <div className="card-container" style={{ visibility: imageReady ? 'visible' : 'hidden' }}>
             <div className="card" {...cardProps}>
               <div className="swipe-label swipe-label-like" style={{ opacity: likeOpacity }}>
                 LIKE
@@ -89,7 +98,8 @@ export default function Gallery() {
                     className="card-image"
                     src={`https://media.collections.yale.edu/thumbnail/yuag/obj/${artwork.id}`}
                     alt={artwork.label}
-                    onError={e => { e.target.src = FALLBACK_IMAGE }}
+                    onLoad={() => setImageReady(true)}
+                    onError={skipCurrentArtwork}
                     draggable={false}
                   />
                   <div className="card-gradient">
@@ -121,18 +131,22 @@ export default function Gallery() {
             </div>
           </div>
 
-          <div className="action-buttons">
-            <button className="action-btn action-btn-pass" onClick={() => handleSwipe('left')}>
-              ✕
-            </button>
-            <button className="action-btn action-btn-like" onClick={() => handleSwipe('right')}>
-              ♥
-            </button>
-          </div>
+          {imageReady && (
+            <>
+              <div className="action-buttons">
+                <button className="action-btn action-btn-pass" onClick={() => handleSwipe('left')}>
+                  ✕
+                </button>
+                <button className="action-btn action-btn-like" onClick={() => handleSwipe('right')}>
+                  ♥
+                </button>
+              </div>
 
-          <p className="gallery-counter">
-            {currentIndex + 1} viewed
-          </p>
+              <p className="gallery-counter">
+                {currentIndex + 1} viewed
+              </p>
+            </>
+          )}
         </>
       ) : !error && artworks.length === 0 ? (
         <p className="status-message">Loading artworks...</p>
