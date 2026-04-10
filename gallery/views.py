@@ -7,8 +7,8 @@ from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
 from rest_framework import status
 from rest_framework.authtoken.models import Token
-from .models import Artwork, Interaction, TasteSignal
-from .serializers import ArtworkSerializer, ArtworkDetailSerializer, UserSerializer
+from .models import Artwork, Interaction, TasteSignal, Message
+from .serializers import ArtworkSerializer, ArtworkDetailSerializer, UserSerializer, MessageSerializer
 from .taste import update_taste_signals, check_matches, MATCH_CHECK_INTERVAL
 
 
@@ -140,6 +140,42 @@ def liked_artworks(request):
         'offset': offset,
         'results': serializer.data,
     })
+
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def user_list(request):
+    """Return all users except the current user."""
+    users = User.objects.exclude(id=request.user.id).values('id', 'username')
+    return Response(list(users))
+
+
+@api_view(['GET', 'POST'])
+@permission_classes([IsAuthenticated])
+def conversation(request, user_id):
+    """GET messages between current user and user_id. POST sends a new message."""
+    try:
+        other_user = User.objects.get(id=user_id)
+    except User.DoesNotExist:
+        return Response({'error': 'User not found'}, status=status.HTTP_404_NOT_FOUND)
+
+    if request.method == 'GET':
+        messages = Message.objects.filter(
+            sender=request.user, recipient=other_user
+        ) | Message.objects.filter(
+            sender=other_user, recipient=request.user
+        )
+        messages = messages.order_by('timestamp')
+        serializer = MessageSerializer(messages, many=True)
+        return Response(serializer.data)
+
+    text = request.data.get('text', '').strip()
+    if not text:
+        return Response({'error': 'text is required'}, status=status.HTTP_400_BAD_REQUEST)
+
+    message = Message.objects.create(sender=request.user, recipient=other_user, text=text)
+    serializer = MessageSerializer(message)
+    return Response(serializer.data, status=status.HTTP_201_CREATED)
 
 
 @api_view(['GET'])

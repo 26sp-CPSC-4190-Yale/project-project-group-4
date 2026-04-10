@@ -1,6 +1,6 @@
 from rest_framework import serializers
 from django.contrib.auth.models import User
-from .models import Artwork, Interaction
+from .models import Artwork, Interaction, Message
 
 
 class UserSerializer(serializers.ModelSerializer):
@@ -18,6 +18,14 @@ class ArtworkSerializer(serializers.ModelSerializer):
     class Meta:
         model = Artwork
         fields = ['id', 'label', 'accession_no', 'date']
+
+class MessageSerializer(serializers.ModelSerializer):
+    sender_username = serializers.CharField(source='sender.username', read_only=True)
+
+    class Meta:
+        model = Message
+        fields = ['id', 'sender', 'sender_username', 'recipient', 'text', 'timestamp']
+        read_only_fields = ['sender', 'timestamp']
 
 class ArtworkDetailSerializer(serializers.ModelSerializer):
     """Detailed artwork serializer with interaction statistics."""

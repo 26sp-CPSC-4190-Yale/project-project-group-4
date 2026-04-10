@@ -34,6 +34,13 @@ export default function Layout({ activeTab, onNavigate, children }) {
           <span className="tab-bar-icon">♥</span>
           My Likes
         </button>
+        <button
+          className={`tab-bar-item ${activeTab === 'messages' ? 'active' : ''}`}
+          onClick={() => onNavigate('messages')}
+        >
+          <span className="tab-bar-icon">✉</span>
+          Messages
+        </button>
       </footer>
     </>
   )

@@ -5,6 +5,7 @@ import Register from './Register'
 import Layout from './Layout'
 import Gallery from './Gallery'
 import LikedArt from './LikedArt'
+import Messages from './Messages'
 import './App.css'
 
 function AuthGate() {
@@ -17,9 +18,15 @@ function AuthGate() {
     return <Login onSwitch={() => setShowRegister(true)} />
   }
 
+  function renderView() {
+    if (view === 'likes') return <LikedArt />
+    if (view === 'messages') return <Messages />
+    return <Gallery />
+  }
+
   return (
     <Layout activeTab={view} onNavigate={setView}>
-      {view === 'likes' ? <LikedArt /> : <Gallery />}
+      {renderView()}
     </Layout>
   )
 }
