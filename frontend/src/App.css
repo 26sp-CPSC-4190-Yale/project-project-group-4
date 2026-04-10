@@ -716,3 +716,40 @@
   text-align: center;
   font-size: 0.95em;
 }
+
+/* ── Taste Profile Page ── */
+
+.taste-section {
+  margin: 0 auto 24px;
+  max-width: 900px;
+  padding: 0 20px;
+}
+
+.taste-section-title {
+  margin: 0 0 10px;
+  font-size: 1rem;
+  font-weight: 700;
+  color: var(--text-primary);
+}
+
+.taste-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.taste-tag {
+  display: inline-flex;
+  align-items: center;
+  padding: 8px 14px;
+  border-radius: 999px;
+  background: var(--bg-surface);
+  color: var(--text-primary);
+  border: 1px solid var(--border-subtle);
+  font-size: 0.9em;
+  transition: transform 0.15s ease;
+}
+
+.taste-tag:hover {
+  transform: translateY(-1px);
+}

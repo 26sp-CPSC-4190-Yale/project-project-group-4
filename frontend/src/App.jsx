@@ -6,6 +6,7 @@ import Layout from './Layout'
 import Gallery from './Gallery'
 import LikedArt from './LikedArt'
 import Messages from './Messages'
+import TasteProfile from './TasteProfile'
 import './App.css'
 
 function AuthGate() {
@@ -20,6 +21,7 @@ function AuthGate() {
 
   function renderView() {
     if (view === 'likes') return <LikedArt />
+    if (view === 'taste') return <TasteProfile />
     if (view === 'messages') return <Messages />
     return <Gallery />
   }
