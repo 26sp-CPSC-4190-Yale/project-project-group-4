@@ -2,7 +2,7 @@ import { useAuth } from './AuthContext'
 
 /**
  * Shared page layout: top nav + content + bottom tab bar.
- * Used by both Gallery and LikedArt views.
+ * Tapping the username in the top-right opens the Profile view.
  */
 export default function Layout({ activeTab, onNavigate, children }) {
   const { user, logout } = useAuth()
@@ -12,7 +12,13 @@ export default function Layout({ activeTab, onNavigate, children }) {
       <nav className="top-nav">
         <h1 className="top-nav-brand">YArt Match</h1>
         <div className="top-nav-right">
-          <span className="top-nav-user">{user.username}</span>
+          <button
+            type="button"
+            className={`top-nav-user ${activeTab === 'profile' ? 'active' : ''}`}
+            onClick={() => onNavigate('profile')}
+          >
+            {user.username}
+          </button>
           <button className="top-nav-logout" onClick={logout}>Log out</button>
         </div>
       </nav>
