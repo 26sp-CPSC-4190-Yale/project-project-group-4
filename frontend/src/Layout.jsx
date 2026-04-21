@@ -23,7 +23,9 @@ export default function Layout({ activeTab, onNavigate, children }) {
         </div>
       </nav>
 
-      {children}
+      <main className="page-content">
+        {children}
+      </main>
 
       <footer className="tab-bar">
         <button
