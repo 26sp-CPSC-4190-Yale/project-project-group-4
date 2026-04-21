@@ -24,7 +24,11 @@ urlpatterns = [
 
     # Taste profile (requires auth)
     path('api/taste/me/', views.my_taste, name='my_taste'),
+
     # Messaging
     path('api/users/', views.user_list, name='user_list'),
     path('api/messages/<int:user_id>/', views.conversation, name='conversation'),
+
+    # Get current user's interaction stats (requires auth)
+    path('api/profile/stats/', views.profile_stats, name='profile_stats'),
 ]
