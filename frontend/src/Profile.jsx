@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react'
 import { useAuth } from './AuthContext'
 import { BASE_URL, FALLBACK_IMAGE } from './constants'
 
-export default function Profile() {
+export default function Profile({ onNavigate }) {
   const { token, user } = useAuth()
   const [totalLikes, setTotalLikes] = useState(null)
   const [recent, setRecent] = useState([])
@@ -44,9 +44,11 @@ export default function Profile() {
 
       <section className="profile-stats">
         <div className="profile-stat-card">
-          <p className="profile-stat-value">
-            {loading ? '—' : totalLikes ?? 0}
-          </p>
+          {loading ? (
+            <div className="profile-skeleton profile-skeleton-stat" />
+          ) : (
+            <p className="profile-stat-value">{totalLikes ?? 0}</p>
+          )}
           <p className="profile-stat-label">Total Likes</p>
         </div>
       </section>
@@ -59,19 +61,29 @@ export default function Profile() {
         {error && <p className="error-message">{error}</p>}
 
         {loading ? (
-          <p className="status-message">Loading…</p>
+          <div className="profile-recent-strip">
+            {Array.from({ length: 6 }).map((_, i) => (
+              <div key={i} className="profile-skeleton profile-skeleton-thumb" />
+            ))}
+          </div>
         ) : recent.length === 0 ? (
           <p className="profile-empty">Nothing here yet — start swiping!</p>
         ) : (
           <div className="profile-recent-strip">
             {recent.map(artwork => (
-              <div key={artwork.id} className="profile-recent-item">
+              <button
+                key={artwork.id}
+                type="button"
+                className="profile-recent-item"
+                onClick={() => onNavigate?.('likes')}
+                aria-label={`Open My Likes — ${artwork.label}`}
+              >
                 <img
                   src={`https://media.collections.yale.edu/thumbnail/yuag/obj/${artwork.id}`}
                   alt={artwork.label}
                   onError={e => { e.target.src = FALLBACK_IMAGE }}
                 />
-              </div>
+              </button>
             ))}
           </div>
         )}

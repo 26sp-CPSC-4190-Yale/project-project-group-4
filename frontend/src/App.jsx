@@ -24,7 +24,7 @@ function AuthGate() {
     if (view === 'likes') return <LikedArt />
     if (view === 'taste') return <TasteProfile />
     if (view === 'messages') return <Messages />
-    if (view === 'profile') return <Profile />
+    if (view === 'profile') return <Profile onNavigate={setView} />
     return <Gallery />
   }
 
