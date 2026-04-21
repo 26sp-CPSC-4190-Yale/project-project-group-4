@@ -910,6 +910,60 @@
   display: block;
 }
 
+/* ── Eras ── */
+
+.profile-eras {
+  margin-bottom: 24px;
+}
+
+.profile-era-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.profile-era-row {
+  display: grid;
+  grid-template-columns: 120px 1fr auto;
+  align-items: center;
+  gap: 12px;
+  padding: 6px 0;
+  font-size: 0.9em;
+}
+
+.profile-era-label {
+  color: var(--text-secondary);
+  font-family: var(--font-display);
+}
+
+.profile-era-bar-track {
+  height: 8px;
+  background: var(--bg-surface);
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+.profile-era-bar-fill {
+  height: 100%;
+  background: var(--accent);
+  border-radius: 4px;
+  transition: width 0.4s ease;
+}
+
+.profile-era-count {
+  color: var(--text-muted);
+  font-size: 0.85em;
+  font-variant-numeric: tabular-nums;
+  min-width: 70px;
+  text-align: right;
+}
+
+.profile-empty-sub {
+  color: var(--text-muted);
+  font-size: 0.9em;
+  margin: 4px 0 0;
+}
+
 /* ── Skeletons ── */
 
 .profile-skeleton {
@@ -934,6 +988,12 @@
   flex: 0 0 120px;
   aspect-ratio: 1;
   border-radius: 10px;
+}
+
+.profile-skeleton-era {
+  height: 20px;
+  width: 100%;
+  border-radius: 4px;
 }
 
 @keyframes profile-shimmer {
