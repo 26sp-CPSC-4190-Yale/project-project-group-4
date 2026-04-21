@@ -830,6 +830,12 @@
   word-break: break-all;
 }
 
+.profile-since {
+  margin: 6px 0 0;
+  color: var(--text-muted);
+  font-size: 0.8em;
+}
+
 .profile-stats {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));

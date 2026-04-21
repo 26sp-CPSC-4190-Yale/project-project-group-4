@@ -8,21 +8,22 @@ const PROFILE_FETCH_LIMIT = 500
 export default function Profile({ onNavigate }) {
   const { token, user } = useAuth()
   const [liked, setLiked] = useState([])
-  const [totalLikes, setTotalLikes] = useState(null)
+  const [stats, setStats] = useState(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
 
   useEffect(() => {
     async function fetchProfile() {
+      const headers = { Authorization: `Token ${token}` }
       try {
-        const res = await fetch(
-          `${BASE_URL}/api/liked/?limit=${PROFILE_FETCH_LIMIT}&offset=0`,
-          { headers: { Authorization: `Token ${token}` } }
-        )
-        if (!res.ok) throw new Error()
-        const data = await res.json()
-        setTotalLikes(data.count)
-        setLiked(data.results)
+        const [likedRes, statsRes] = await Promise.all([
+          fetch(`${BASE_URL}/api/liked/?limit=${PROFILE_FETCH_LIMIT}&offset=0`, { headers }),
+          fetch(`${BASE_URL}/api/profile/stats/`, { headers }),
+        ])
+        if (!likedRes.ok || !statsRes.ok) throw new Error()
+        const [likedData, statsData] = await Promise.all([likedRes.json(), statsRes.json()])
+        setLiked(likedData.results)
+        setStats(statsData)
       } catch {
         setError('Failed to load profile data.')
       } finally {
@@ -37,6 +38,18 @@ export default function Profile({ onNavigate }) {
 
   const initial = user?.username?.[0]?.toUpperCase() ?? '?'
 
+  const memberSince = stats?.date_joined
+    ? new Date(stats.date_joined).toLocaleDateString('en-US', {
+        year: 'numeric',
+        month: 'long',
+      })
+    : null
+
+  const likeRatePercent =
+    stats && (stats.total_likes + stats.total_passes) > 0
+      ? Math.round(stats.like_rate * 100)
+      : null
+
   return (
     <div className="profile-page">
       <h2 className="profile-title">Profile</h2>
@@ -46,6 +59,9 @@ export default function Profile({ onNavigate }) {
         <div className="profile-account-info">
           <p className="profile-username">{user?.username}</p>
           {user?.email && <p className="profile-email">{user.email}</p>}
+          {memberSince && (
+            <p className="profile-since">Member since {memberSince}</p>
+          )}
         </div>
       </section>
 
@@ -54,9 +70,27 @@ export default function Profile({ onNavigate }) {
           {loading ? (
             <div className="profile-skeleton profile-skeleton-stat" />
           ) : (
-            <p className="profile-stat-value">{totalLikes ?? 0}</p>
+            <p className="profile-stat-value">{stats?.total_likes ?? 0}</p>
           )}
           <p className="profile-stat-label">Total Likes</p>
+        </div>
+        <div className="profile-stat-card">
+          {loading ? (
+            <div className="profile-skeleton profile-skeleton-stat" />
+          ) : (
+            <p className="profile-stat-value">{stats?.total_passes ?? 0}</p>
+          )}
+          <p className="profile-stat-label">Total Passes</p>
+        </div>
+        <div className="profile-stat-card">
+          {loading ? (
+            <div className="profile-skeleton profile-skeleton-stat" />
+          ) : (
+            <p className="profile-stat-value">
+              {likeRatePercent == null ? '—' : `${likeRatePercent}%`}
+            </p>
+          )}
+          <p className="profile-stat-label">Like Rate</p>
         </div>
       </section>
 
