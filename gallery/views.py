@@ -120,6 +120,30 @@ def artwork_detail(request, artwork_id):
 
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
+def profile_stats(request):
+    """Return the current user's interaction stats for the profile page."""
+    interactions = Interaction.objects.filter(user=request.user)
+    total_likes = interactions.filter(action='like').count()
+    total_passes = interactions.filter(action='pass').count()
+    total = total_likes + total_passes
+    like_rate = round(total_likes / total, 3) if total else 0.0
+    first = (
+        interactions.order_by('timestamp')
+        .values_list('timestamp', flat=True)
+        .first()
+    )
+
+    return Response({
+        'total_likes': total_likes,
+        'total_passes': total_passes,
+        'like_rate': like_rate,
+        'first_interaction_at': first.isoformat() if first else None,
+        'date_joined': request.user.date_joined.isoformat(),
+    })
+
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
 def liked_artworks(request):
     """Return artworks the current user has liked, paginated."""
     limit = int(request.query_params.get('limit', 20))

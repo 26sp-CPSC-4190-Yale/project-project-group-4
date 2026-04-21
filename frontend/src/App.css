@@ -439,11 +439,21 @@
   font-family: inherit;
 }
 
+/* ── Page Content (scroll host) ── */
+
+.page-content {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  overflow-y: auto;
+  scrollbar-gutter: stable;
+  min-height: 0;
+}
+
 /* ── My Likes Page ── */
 
 .likes-page {
   flex: 1;
-  overflow-y: auto;
   padding: 0 20px 24px;
 }
 
@@ -509,7 +519,6 @@
 
 .messages-page {
   flex: 1;
-  overflow-y: auto;
   padding: 0 20px 24px;
 }
 
@@ -775,7 +784,6 @@
 
 .profile-page {
   flex: 1;
-  overflow-y: auto;
   padding: 0 20px 24px;
 }
 
@@ -828,6 +836,12 @@
   color: var(--text-secondary);
   font-size: 0.9em;
   word-break: break-all;
+}
+
+.profile-since {
+  margin: 6px 0 0;
+  color: var(--text-muted);
+  font-size: 0.8em;
 }
 
 .profile-stats {
@@ -890,6 +904,17 @@
   overflow: hidden;
   background: var(--bg-card);
   border: 1px solid var(--border-subtle);
+  padding: 0;
+  cursor: pointer;
+  font-family: inherit;
+  transition: transform 0.15s ease, border-color 0.15s ease;
+}
+
+.profile-recent-item:hover,
+.profile-recent-item:focus-visible {
+  transform: translateY(-3px);
+  border-color: var(--accent);
+  outline: none;
 }
 
 .profile-recent-item img {
@@ -897,6 +922,97 @@
   aspect-ratio: 1;
   object-fit: cover;
   display: block;
+}
+
+/* ── Eras ── */
+
+.profile-eras {
+  margin-bottom: 24px;
+}
+
+.profile-era-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.profile-era-row {
+  display: grid;
+  grid-template-columns: 120px 1fr auto;
+  align-items: center;
+  gap: 12px;
+  padding: 6px 0;
+  font-size: 0.9em;
+}
+
+.profile-era-label {
+  color: var(--text-secondary);
+  font-family: var(--font-display);
+}
+
+.profile-era-bar-track {
+  height: 8px;
+  background: var(--bg-surface);
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+.profile-era-bar-fill {
+  height: 100%;
+  background: var(--accent);
+  border-radius: 4px;
+  transition: width 0.4s ease;
+}
+
+.profile-era-count {
+  color: var(--text-muted);
+  font-size: 0.85em;
+  font-variant-numeric: tabular-nums;
+  min-width: 70px;
+  text-align: right;
+}
+
+.profile-empty-sub {
+  color: var(--text-muted);
+  font-size: 0.9em;
+  margin: 4px 0 0;
+}
+
+/* ── Skeletons ── */
+
+.profile-skeleton {
+  background: linear-gradient(
+    90deg,
+    var(--bg-card) 0%,
+    var(--bg-surface) 50%,
+    var(--bg-card) 100%
+  );
+  background-size: 200% 100%;
+  animation: profile-shimmer 1.4s ease-in-out infinite;
+  border-radius: 8px;
+}
+
+.profile-skeleton-stat {
+  height: 2.2em;
+  width: 80px;
+  margin: 0 auto;
+}
+
+.profile-skeleton-thumb {
+  flex: 0 0 120px;
+  aspect-ratio: 1;
+  border-radius: 10px;
+}
+
+.profile-skeleton-era {
+  height: 20px;
+  width: 100%;
+  border-radius: 4px;
+}
+
+@keyframes profile-shimmer {
+  0% { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
 }
 
 .profile-empty {
