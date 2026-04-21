@@ -890,6 +890,17 @@
   overflow: hidden;
   background: var(--bg-card);
   border: 1px solid var(--border-subtle);
+  padding: 0;
+  cursor: pointer;
+  font-family: inherit;
+  transition: transform 0.15s ease, border-color 0.15s ease;
+}
+
+.profile-recent-item:hover,
+.profile-recent-item:focus-visible {
+  transform: translateY(-3px);
+  border-color: var(--accent);
+  outline: none;
 }
 
 .profile-recent-item img {
@@ -897,6 +908,37 @@
   aspect-ratio: 1;
   object-fit: cover;
   display: block;
+}
+
+/* ── Skeletons ── */
+
+.profile-skeleton {
+  background: linear-gradient(
+    90deg,
+    var(--bg-card) 0%,
+    var(--bg-surface) 50%,
+    var(--bg-card) 100%
+  );
+  background-size: 200% 100%;
+  animation: profile-shimmer 1.4s ease-in-out infinite;
+  border-radius: 8px;
+}
+
+.profile-skeleton-stat {
+  height: 2.2em;
+  width: 80px;
+  margin: 0 auto;
+}
+
+.profile-skeleton-thumb {
+  flex: 0 0 120px;
+  aspect-ratio: 1;
+  border-radius: 10px;
+}
+
+@keyframes profile-shimmer {
+  0% { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
 }
 
 .profile-empty {
