@@ -1,24 +1,28 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import { useAuth } from './AuthContext'
 import { BASE_URL, FALLBACK_IMAGE } from './constants'
+import { buildEraBreakdown } from './dateUtils'
+
+const PROFILE_FETCH_LIMIT = 500
 
 export default function Profile({ onNavigate }) {
   const { token, user } = useAuth()
+  const [liked, setLiked] = useState([])
   const [totalLikes, setTotalLikes] = useState(null)
-  const [recent, setRecent] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
 
   useEffect(() => {
     async function fetchProfile() {
       try {
-        const res = await fetch(`${BASE_URL}/api/liked/?limit=8&offset=0`, {
-          headers: { Authorization: `Token ${token}` },
-        })
+        const res = await fetch(
+          `${BASE_URL}/api/liked/?limit=${PROFILE_FETCH_LIMIT}&offset=0`,
+          { headers: { Authorization: `Token ${token}` } }
+        )
         if (!res.ok) throw new Error()
         const data = await res.json()
         setTotalLikes(data.count)
-        setRecent(data.results)
+        setLiked(data.results)
       } catch {
         setError('Failed to load profile data.')
       } finally {
@@ -27,6 +31,9 @@ export default function Profile({ onNavigate }) {
     }
     fetchProfile()
   }, [token])
+
+  const recent = liked.slice(0, 8)
+  const eras = useMemo(() => buildEraBreakdown(liked), [liked])
 
   const initial = user?.username?.[0]?.toUpperCase() ?? '?'
 
@@ -51,6 +58,41 @@ export default function Profile({ onNavigate }) {
           )}
           <p className="profile-stat-label">Total Likes</p>
         </div>
+      </section>
+
+      <section className="profile-eras">
+        <div className="profile-section-header">
+          <h3 className="profile-section-title">Eras You Love</h3>
+        </div>
+
+        {loading ? (
+          <div className="profile-era-list">
+            {Array.from({ length: 3 }).map((_, i) => (
+              <div key={i} className="profile-skeleton profile-skeleton-era" />
+            ))}
+          </div>
+        ) : eras.length === 0 ? (
+          <p className="profile-empty-sub">
+            Like a few artworks to see your era breakdown.
+          </p>
+        ) : (
+          <div className="profile-era-list">
+            {eras.map(({ label, count, percent }) => (
+              <div key={label} className="profile-era-row">
+                <span className="profile-era-label">{label}</span>
+                <div className="profile-era-bar-track">
+                  <div
+                    className="profile-era-bar-fill"
+                    style={{ width: `${Math.max(percent, 2)}%` }}
+                  />
+                </div>
+                <span className="profile-era-count">
+                  {count} · {percent}%
+                </span>
+              </div>
+            ))}
+          </div>
+        )}
       </section>
 
       <section className="profile-recent">
