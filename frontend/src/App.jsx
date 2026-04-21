@@ -7,6 +7,7 @@ import Gallery from './Gallery'
 import LikedArt from './LikedArt'
 import Messages from './Messages'
 import TasteProfile from './TasteProfile'
+import Profile from './Profile'
 import './App.css'
 
 function AuthGate() {
@@ -23,6 +24,7 @@ function AuthGate() {
     if (view === 'likes') return <LikedArt />
     if (view === 'taste') return <TasteProfile />
     if (view === 'messages') return <Messages />
+    if (view === 'profile') return <Profile />
     return <Gallery />
   }
 
