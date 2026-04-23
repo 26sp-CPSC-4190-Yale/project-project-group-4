@@ -4,7 +4,7 @@ import { useAuth } from './AuthContext'
 const BASE_URL = import.meta.env.VITE_API_URL || 'http://127.0.0.1:8000'
 const POLL_INTERVAL = 4000
 
-export default function Conversation({ otherUser, onBack }) {
+export default function Conversation({ otherUser, onBack, onUnmatch }) {
   const { token, user } = useAuth()
   const [messages, setMessages] = useState([])
   const [text, setText] = useState('')
@@ -54,11 +54,21 @@ export default function Conversation({ otherUser, onBack }) {
     }
   }
 
+  async function handleUnmatch() {
+    if (!confirm(`Unmatch with ${otherUser.username}? This will delete all messages.`)) return
+    const res = await fetch(`${BASE_URL}/api/matches/${otherUser.id}/`, {
+      method: 'DELETE',
+      headers: { Authorization: `Token ${token}` },
+    })
+    if (res.ok) onUnmatch()
+  }
+
   return (
     <div className="conversation">
       <div className="conversation-header">
         <button className="conversation-back" onClick={onBack}>←</button>
         <span className="conversation-title">{otherUser.username}</span>
+        <button className="conversation-unmatch" onClick={handleUnmatch}>Unmatch</button>
       </div>
 
       <div className="conversation-messages">
