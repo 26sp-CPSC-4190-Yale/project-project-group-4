@@ -25,9 +25,13 @@ urlpatterns = [
     # Taste profile (requires auth)
     path('api/taste/me/', views.my_taste, name='my_taste'),
 
-    # Messaging
-    path('api/users/', views.user_list, name='user_list'),
+    # Matches & messaging
+    path('api/matches/', views.match_list, name='match_list'),
+    path('api/matches/<int:user_id>/action/', views.match_action, name='match_action'),
+    path('api/matches/<int:user_id>/facets/', views.match_facets, name='match_facets'),
+    path('api/matches/<int:user_id>/', views.unmatch, name='unmatch'),
     path('api/messages/<int:user_id>/', views.conversation, name='conversation'),
+    path('api/notifications/', views.notifications, name='notifications'),
 
     # Get current user's interaction stats (requires auth)
     path('api/profile/stats/', views.profile_stats, name='profile_stats'),

@@ -2,6 +2,7 @@ from django.shortcuts import render
 from django.http import Http404
 from django.contrib.auth import authenticate
 from django.contrib.auth.models import User
+from django.db.models import Q
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
@@ -166,23 +167,130 @@ def liked_artworks(request):
     })
 
 
-def _get_matched_user_ids(user):
-    """Return the set of user IDs that the given user has matched with."""
-    from django.db.models import Q
-    matches = Match.objects.filter(Q(user1=user) | Q(user2=user)).values_list('user1_id', 'user2_id')
-    ids = set()
-    for u1, u2 in matches:
-        ids.add(u1 if u2 == user.id else u2)
-    return ids
+def _get_match(user, other_id):
+    return Match.objects.filter(
+        Q(user1_id=user.id, user2_id=other_id) | Q(user1_id=other_id, user2_id=user.id)
+    ).first()
+
+
+def _top_facets(user_id, other_id, limit=3):
+    my_sigs = {(s.facet, s.value): s.score for s in TasteSignal.objects.filter(user_id=user_id)}
+    their_sigs = {(s.facet, s.value): s.score for s in TasteSignal.objects.filter(user_id=other_id)}
+    shared = []
+    for key in set(my_sigs) & set(their_sigs):
+        facet, value = key
+        avg = (my_sigs[key] + their_sigs[key]) / 2
+        shared.append({'facet': facet, 'value': value, 'score': round(avg, 3)})
+    shared.sort(key=lambda x: -x['score'])
+    return shared[:limit]
 
 
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
-def user_list(request):
-    """Return users the current user has matched with."""
-    matched_ids = _get_matched_user_ids(request.user)
-    users = User.objects.filter(id__in=matched_ids).values('id', 'username')
-    return Response(list(users))
+def match_list(request):
+    """Return the current user's matches with status and top shared facets."""
+    me = request.user
+    matches = Match.objects.filter(Q(user1=me) | Q(user2=me)).select_related('user1', 'user2', 'requested_by')
+
+    Match.objects.filter(user1=me, seen_by_user1=False).update(seen_by_user1=True)
+    Match.objects.filter(user2=me, seen_by_user2=False).update(seen_by_user2=True)
+
+    result = []
+    for m in matches:
+        other = m.user2 if m.user1_id == me.id else m.user1
+        result.append({
+            'user': {'id': other.id, 'username': other.username},
+            'similarity': round(m.similarity, 3),
+            'status': m.status,
+            'requested_by_me': m.requested_by_id == me.id if m.requested_by_id else False,
+            'matched_at': m.matched_at.isoformat(),
+            'top_facets': _top_facets(me.id, other.id),
+        })
+    return Response(result)
+
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def match_action(request, user_id):
+    """Perform an action on a match: request, accept, or decline."""
+    action = request.data.get('action')
+    if action not in ('request', 'accept', 'decline'):
+        return Response({'error': 'action must be request, accept, or decline'}, status=status.HTTP_400_BAD_REQUEST)
+
+    match = _get_match(request.user, user_id)
+    if not match:
+        return Response({'error': 'Match not found'}, status=status.HTTP_404_NOT_FOUND)
+
+    me = request.user
+
+    if action == 'request':
+        if match.status != Match.STATUS_PENDING:
+            return Response({'error': 'Match is not in pending state'}, status=status.HTTP_400_BAD_REQUEST)
+        match.status = Match.STATUS_REQUESTED
+        match.requested_by = me
+        match.save()
+
+    elif action == 'accept':
+        if match.status != Match.STATUS_REQUESTED or match.requested_by_id == me.id:
+            return Response({'error': 'No incoming request to accept'}, status=status.HTTP_400_BAD_REQUEST)
+        match.status = Match.STATUS_ACCEPTED
+        match.save()
+
+    elif action == 'decline':
+        if match.status != Match.STATUS_REQUESTED or match.requested_by_id == me.id:
+            return Response({'error': 'No incoming request to decline'}, status=status.HTTP_400_BAD_REQUEST)
+        Message.objects.filter(
+            Q(sender=me, recipient_id=user_id) | Q(sender_id=user_id, recipient=me)
+        ).delete()
+        match.delete()
+        return Response(status=status.HTTP_204_NO_CONTENT)
+
+    return Response({'status': match.status})
+
+
+@api_view(['DELETE'])
+@permission_classes([IsAuthenticated])
+def unmatch(request, user_id):
+    """Unmatch and delete all messages between the two users."""
+    match = _get_match(request.user, user_id)
+    if not match:
+        return Response({'error': 'Match not found'}, status=status.HTTP_404_NOT_FOUND)
+
+    me = request.user
+    Message.objects.filter(
+        Q(sender=me, recipient_id=user_id) | Q(sender_id=user_id, recipient=me)
+    ).delete()
+    match.delete()
+    return Response(status=status.HTTP_204_NO_CONTENT)
+
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def match_facets(request, user_id):
+    """Return the top shared taste facets between the current user and another matched user."""
+    match = _get_match(request.user, user_id)
+    if not match:
+        return Response({'error': 'Match not found'}, status=status.HTTP_404_NOT_FOUND)
+    return Response(_top_facets(request.user.id, user_id))
+
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def notifications(request):
+    """Return counts of unseen new matches and incoming message requests."""
+    me = request.user
+
+    new_matches = Match.objects.filter(
+        Q(user1=me, seen_by_user1=False) | Q(user2=me, seen_by_user2=False),
+        status=Match.STATUS_PENDING,
+    ).count()
+
+    pending_requests = Match.objects.filter(
+        Q(user1=me) | Q(user2=me),
+        status=Match.STATUS_REQUESTED,
+    ).exclude(requested_by=me).count()
+
+    return Response({'new_matches': new_matches, 'pending_requests': pending_requests})
 
 
 @api_view(['GET', 'POST'])
@@ -194,8 +302,9 @@ def conversation(request, user_id):
     except User.DoesNotExist:
         return Response({'error': 'User not found'}, status=status.HTTP_404_NOT_FOUND)
 
-    if user_id not in _get_matched_user_ids(request.user):
-        return Response({'error': 'You are not matched with this user'}, status=status.HTTP_403_FORBIDDEN)
+    match = _get_match(request.user, user_id)
+    if not match or match.status != Match.STATUS_ACCEPTED:
+        return Response({'error': 'You are not in an accepted match with this user'}, status=status.HTTP_403_FORBIDDEN)
 
     if request.method == 'GET':
         messages = Message.objects.filter(

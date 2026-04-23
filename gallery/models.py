@@ -192,6 +192,15 @@ class TasteSignal(models.Model):
 
 
 class Match(models.Model):
+    STATUS_PENDING = 'pending'
+    STATUS_REQUESTED = 'requested'
+    STATUS_ACCEPTED = 'accepted'
+    STATUS_CHOICES = [
+        (STATUS_PENDING, 'Pending'),
+        (STATUS_REQUESTED, 'Requested'),
+        (STATUS_ACCEPTED, 'Accepted'),
+    ]
+
     pk = models.CompositePrimaryKey("user1", "user2")
     user1 = models.ForeignKey(
         User, on_delete=models.CASCADE, related_name="matches_as_user1",
@@ -201,6 +210,12 @@ class Match(models.Model):
     )
     similarity = models.FloatField()
     matched_at = models.DateTimeField(auto_now_add=True)
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default=STATUS_PENDING)
+    requested_by = models.ForeignKey(
+        User, on_delete=models.SET_NULL, null=True, blank=True, related_name='sent_requests',
+    )
+    seen_by_user1 = models.BooleanField(default=False)
+    seen_by_user2 = models.BooleanField(default=False)
 
 class Message(models.Model):
     sender = models.ForeignKey(User, on_delete=models.CASCADE, related_name='sent_messages')
