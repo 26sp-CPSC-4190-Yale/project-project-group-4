@@ -958,6 +958,8 @@
 
 .aotd-image {
   width: 100%;
+  max-height: 40vh;
+  object-fit: contain;
   display: block;
   border-radius: var(--radius-card);
 }
