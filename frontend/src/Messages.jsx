@@ -1,6 +1,8 @@
 import { useState, useEffect } from 'react'
 import { useAuth } from './AuthContext'
 import Conversation from './Conversation'
+import MatchProfile from './MatchProfile'
+
 
 const BASE_URL = import.meta.env.VITE_API_URL || 'http://127.0.0.1:8000'
 
@@ -9,6 +11,8 @@ export default function Messages() {
   const [matches, setMatches] = useState([])
   const [loading, setLoading] = useState(true)
   const [activeConversation, setActiveConversation] = useState(null)
+  const [activeProfile, setActiveProfile] = useState(null)
+
 
   async function fetchMatches() {
     const res = await fetch(`${BASE_URL}/api/matches/`, {
@@ -27,6 +31,19 @@ export default function Messages() {
       body: JSON.stringify({ action }),
     })
     if (res.ok) fetchMatches()
+  }
+
+  if (activeProfile) {
+    return (
+      <MatchProfile
+        match={activeProfile}
+        onBack={() => setActiveProfile(null)}
+        onMessage={user => {
+          setActiveProfile(null)
+          setActiveConversation(user)
+        }}
+      />
+    )
   }
 
   if (activeConversation) {
@@ -77,9 +94,10 @@ export default function Messages() {
           <h3 className="match-section-title">New Matches</h3>
           {newMatches.map(m => (
             <MatchCard key={m.user.id} m={m} actions={
-              <button className="match-action-btn primary" onClick={() => performAction(m.user.id, 'request')}>
-                Send Request
-              </button>
+              <>
+                <button className="match-action-btn secondary" onClick={() => setActiveProfile(m)}>View Profile</button>
+                <button className="match-action-btn primary" onClick={() => performAction(m.user.id, 'request')}>Send Request</button>
+              </>
             } />
           ))}
         </section>
@@ -91,6 +109,7 @@ export default function Messages() {
           {incoming.map(m => (
             <MatchCard key={m.user.id} m={m} actions={
               <>
+                <button className="match-action-btn secondary" onClick={() => setActiveProfile(m)}>View Profile</button>
                 <button className="match-action-btn primary" onClick={() => performAction(m.user.id, 'accept')}>Accept</button>
                 <button className="match-action-btn secondary" onClick={() => performAction(m.user.id, 'decline')}>Decline</button>
               </>
@@ -104,7 +123,10 @@ export default function Messages() {
           <h3 className="match-section-title">Pending</h3>
           {sent.map(m => (
             <MatchCard key={m.user.id} m={m} actions={
-              <span className="match-status-label">Waiting…</span>
+              <>
+                <button className="match-action-btn secondary" onClick={() => setActiveProfile(m)}>View Profile</button>
+                <span className="match-status-label">Waiting…</span>
+              </>
             } />
           ))}
         </section>
@@ -116,11 +138,18 @@ export default function Messages() {
           <ul className="messages-user-list">
             {conversations.map(m => (
               <li key={m.user.id}>
-                <button className="messages-user-item" onClick={() => setActiveConversation(m.user)}>
+                <div className="match-card">
                   <span className="messages-user-avatar">{m.user.username[0].toUpperCase()}</span>
-                  <span className="messages-user-name">{m.user.username}</span>
-                  <span className="messages-user-chevron">›</span>
-                </button>
+                  <div className="match-card-info">
+                    <span className="messages-user-name">{m.user.username}</span>
+                    <span className="match-similarity">{Math.round(m.similarity * 100)}% taste match</span>
+                    <FacetTags facets={m.top_facets} />
+                  </div>
+                  <div className="match-actions">
+                    <button className="match-action-btn secondary" onClick={() => setActiveProfile(m)}>View Profile</button>
+                    <button className="match-action-btn primary" onClick={() => setActiveConversation(m.user)}>Open Chat</button>
+                  </div>
+                </div>
               </li>
             ))}
           </ul>
