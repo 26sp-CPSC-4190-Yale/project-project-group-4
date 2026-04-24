@@ -383,7 +383,13 @@ def _get_artwork_references(artwork_ids):
 @permission_classes([IsAuthenticated])
 def daily_artwork(request):
     """Return personalized art-of-the-day candidates with rich metadata."""
-    artwork_ids, explanation = get_daily_artwork(request.user)
+    try:
+        artwork_ids, explanation = get_daily_artwork(request.user)
+    except Exception as e:
+        return Response(
+            {'error': f'{type(e).__name__}: {e}'},
+            status=status.HTTP_500_INTERNAL_SERVER_ERROR,
+        )
 
     if not artwork_ids:
         return Response(
