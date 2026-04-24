@@ -27,13 +27,52 @@ DAILY_CANDIDATES = 10       # Number of art-of-the-day candidates to return
 
 
 def parse_century(date_str):
-    """Extract a century number from a date string like 'ca. 1720-25' -> 18."""
+    """Extract a century number from a date string.
+
+    Handles AD years ("1720", "ca. 1720-25"), BC years ("100 B.C.", "460 B.C.E."),
+    century-only strings ("10th century", "10th century B.C.E."),
+    AD-marker short years ("A.D. 200"), and ranges (uses the first part).
+    Returns a signed integer: positive for AD (e.g. 18), negative for BC (e.g. -1).
+    """
     if not date_str:
         return None
-    match = re.search(r"\b(\d{4})\b", date_str)
-    if match:
-        year = int(match.group(1))
+
+    s = date_str.strip()
+
+    # Century-only strings: "10th century", "10th century B.C.E.", "10th–11th century"
+    # For ranges, grab the first ordinal number when "century" appears anywhere
+    century_match = re.search(r"(\d+)(?:st|nd|rd|th)\b", s, re.IGNORECASE) if re.search(r"century", s, re.IGNORECASE) else None
+    if century_match:
+        century = int(century_match.group(1))
+        if re.search(r"B\.?C\.?(?:E\.?)?", s, re.IGNORECASE):
+            return -century
+        return century
+
+    # BC years: "100 B.C.", "460 B.C.E.", "Ca. 460 BCE"
+    bc_match = re.search(r"(\d+)\s*B\.?C\.?(?:E\.?)?", s, re.IGNORECASE)
+    if bc_match:
+        year = int(bc_match.group(1))
+        return -(year // 100 + (1 if year % 100 else 0))
+
+    # AD-marker short years: "A.D. 200", "AD 65"
+    ad_match = re.search(r"A\.?D\.?\s*(\d+)", s, re.IGNORECASE)
+    if ad_match:
+        year = int(ad_match.group(1))
         return year // 100 + 1
+
+    # Standard 4-digit years: "1720", "ca. 1720-25"
+    four_digit = re.search(r"\b(\d{4})\b", s)
+    if four_digit:
+        year = int(four_digit.group(1))
+        return year // 100 + 1
+
+    # Short standalone years (1-3 digits, no BC/AD marker) — assume AD
+    short_year = re.search(r"\b(\d{1,3})\b", s)
+    if short_year:
+        year = int(short_year.group(1))
+        if year > 0:
+            return year // 100 + 1
+
     return None
 
 

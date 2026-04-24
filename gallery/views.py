@@ -383,11 +383,15 @@ def _get_artwork_references(artwork_ids):
 @permission_classes([IsAuthenticated])
 def daily_artwork(request):
     """Return personalized art-of-the-day candidates with rich metadata."""
-    import traceback
-    try:
+    is_popular = request.query_params.get('fallback') == 'true'
+    if is_popular:
+        from .taste import _daily_cold_start
+        artwork_ids, explanation = _daily_cold_start(request.user), []
+    else:
         artwork_ids, explanation = get_daily_artwork(request.user)
+        is_popular = len(explanation) == 0 and len(artwork_ids) > 0
 
-        if not artwork_ids:
+    if not artwork_ids:
             return Response(
                 {'candidates': [], 'explanation': []},
                 status=status.HTTP_200_OK,
@@ -452,12 +456,8 @@ def daily_artwork(request):
                 'credit_line': artwork_refs.get('Credit Line'),
             })
 
-        return Response({
-            'candidates': candidates,
-            'explanation': explanation,
-        })
-    except Exception:
-        return Response(
-            {'error': traceback.format_exc()},
-            status=status.HTTP_500_INTERNAL_SERVER_ERROR,
-        )
+    return Response({
+        'candidates': candidates,
+        'explanation': explanation,
+        'is_popular': is_popular,
+    })

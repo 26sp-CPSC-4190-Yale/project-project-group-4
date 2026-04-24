@@ -13,6 +13,7 @@ export default function TasteProfile() {
   const [candidates, setCandidates] = useState([])
   const [explanation, setExplanation] = useState([])
   const [candidateIndex, setCandidateIndex] = useState(0)
+  const [isPopular, setIsPopular] = useState(false)
   const [aotdLoading, setAotdLoading] = useState(true)
   const [imageReady, setImageReady] = useState(false)
 
@@ -46,6 +47,7 @@ export default function TasteProfile() {
         const data = await res.json()
         setCandidates(data.candidates || [])
         setExplanation(data.explanation || [])
+        setIsPopular(data.is_popular || false)
       } catch {
         // silent fail — taste profile still shows
       } finally {
@@ -74,10 +76,31 @@ export default function TasteProfile() {
   const dailyArt = candidates[candidateIndex] || null
   const allCandidatesFailed = candidateIndex >= candidates.length && candidates.length > 0
 
+  const [usedFallback, setUsedFallback] = useState(false)
+
   function handleImageError() {
     setImageReady(false)
     setCandidateIndex(i => i + 1)
   }
+
+  useEffect(() => {
+    if (!usedFallback && candidateIndex >= candidates.length && candidates.length > 0) {
+      setUsedFallback(true)
+      fetch(`${BASE_URL}/api/art-of-the-day/?fallback=true`, {
+        headers: { Authorization: `Token ${token}` },
+      })
+        .then(res => res.ok ? res.json() : null)
+        .then(data => {
+          if (data?.candidates?.length) {
+            setCandidates(data.candidates)
+            setCandidateIndex(0)
+            setExplanation([])
+            setIsPopular(true)
+          }
+        })
+        .catch(() => {})
+    }
+  }, [candidateIndex, candidates.length, usedFallback, token])
 
   function formatAgent(agent) {
     let str = agent.name
@@ -194,18 +217,22 @@ export default function TasteProfile() {
               <p className="aotd-credit">{dailyArt.credit_line}</p>
             )}
 
-            {explanation.length > 0 && (
-              <div className="aotd-explanation">
-                <span className="aotd-explanation-label">Chosen for you because you love</span>
-                <div className="aotd-explanation-tags">
-                  {explanation.map(e => (
-                    <span key={`${e.facet}-${e.value}`} className="taste-tag">
-                      {e.value}
-                    </span>
-                  ))}
-                </div>
-              </div>
-            )}
+            <div className="aotd-explanation">
+              {explanation.length > 0 ? (
+                <>
+                  <span className="aotd-explanation-label">Chosen for you because you love</span>
+                  <div className="aotd-explanation-tags">
+                    {explanation.map(e => (
+                      <span key={`${e.facet}-${e.value}`} className="taste-tag">
+                        {e.value}
+                      </span>
+                    ))}
+                  </div>
+                </>
+              ) : isPopular ? (
+                <span className="aotd-explanation-label">Popular among YArt users — keep swiping to get personalized picks</span>
+              ) : null}
+            </div>
           </div>
         </div>
       ) : null}
