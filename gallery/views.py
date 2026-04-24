@@ -383,80 +383,81 @@ def _get_artwork_references(artwork_ids):
 @permission_classes([IsAuthenticated])
 def daily_artwork(request):
     """Return personalized art-of-the-day candidates with rich metadata."""
+    import traceback
     try:
         artwork_ids, explanation = get_daily_artwork(request.user)
-    except Exception as e:
-        return Response(
-            {'error': f'{type(e).__name__}: {e}'},
-            status=status.HTTP_500_INTERNAL_SERVER_ERROR,
+
+        if not artwork_ids:
+            return Response(
+                {'candidates': [], 'explanation': []},
+                status=status.HTTP_200_OK,
+            )
+
+        # Batch-load artworks with prefetched relations (avoids N+1)
+        artworks = (
+            Artwork.objects
+            .filter(id__in=artwork_ids)
+            .prefetch_related('classifiers', 'departments', 'places')
         )
+        artwork_map = {a.id: a for a in artworks}
 
-    if not artwork_ids:
-        return Response(
-            {'candidates': [], 'explanation': []},
-            status=status.HTTP_200_OK,
+        # Batch-load productions with agents and nationalities
+        productions = (
+            Production.objects
+            .filter(artwork_id__in=artwork_ids)
+            .select_related('agent')
+            .prefetch_related('agent__nationalities')
         )
+        prods_by_artwork = {}
+        for prod in productions:
+            prods_by_artwork.setdefault(prod.artwork_id, []).append(prod)
 
-    # Batch-load artworks with prefetched relations (avoids N+1)
-    artworks = (
-        Artwork.objects
-        .filter(id__in=artwork_ids)
-        .prefetch_related('classifiers', 'departments', 'places')
-    )
-    artwork_map = {a.id: a for a in artworks}
+        # Batch-load references
+        refs = _get_artwork_references(artwork_ids)
 
-    # Batch-load productions with agents and nationalities
-    productions = (
-        Production.objects
-        .filter(artwork_id__in=artwork_ids)
-        .select_related('agent')
-        .prefetch_related('agent__nationalities')
-    )
-    prods_by_artwork = {}
-    for prod in productions:
-        prods_by_artwork.setdefault(prod.artwork_id, []).append(prod)
+        # Serialize in score order
+        candidates = []
+        for aid in artwork_ids:
+            artwork = artwork_map.get(aid)
+            if not artwork:
+                continue
 
-    # Batch-load references
-    refs = _get_artwork_references(artwork_ids)
+            agents = []
+            for prod in prods_by_artwork.get(aid, []):
+                agent = prod.agent
+                nationalities = [n.descriptor for n in agent.nationalities.all()]
+                agents.append({
+                    'name': agent.name,
+                    'role': prod.part,
+                    'nationalities': nationalities,
+                    'begin_date': agent.begin_date.isoformat() if agent.begin_date else None,
+                    'end_date': agent.end_date.isoformat() if agent.end_date else None,
+                })
 
-    # Serialize in score order
-    candidates = []
-    for aid in artwork_ids:
-        artwork = artwork_map.get(aid)
-        if not artwork:
-            continue
+            artwork_refs = refs.get(aid, {})
 
-        agents = []
-        for prod in prods_by_artwork.get(aid, []):
-            agent = prod.agent
-            nationalities = [n.descriptor for n in agent.nationalities.all()]
-            agents.append({
-                'name': agent.name,
-                'role': prod.part,
-                'nationalities': nationalities,
-                'begin_date': agent.begin_date.isoformat() if agent.begin_date else None,
-                'end_date': agent.end_date.isoformat() if agent.end_date else None,
+            candidates.append({
+                'id': artwork.id,
+                'label': artwork.label,
+                'date': artwork.date,
+                'accession_no': artwork.accession_no,
+                'agents': agents,
+                'classifiers': [c.name for c in artwork.classifiers.all()],
+                'departments': [d.name for d in artwork.departments.all()],
+                'places': [p.label for p in artwork.places.all()],
+                'medium': artwork_refs.get('Medium'),
+                'dimensions': artwork_refs.get('Dimensions'),
+                'culture': artwork_refs.get('Culture'),
+                'period': artwork_refs.get('Period'),
+                'credit_line': artwork_refs.get('Credit Line'),
             })
 
-        artwork_refs = refs.get(aid, {})
-
-        candidates.append({
-            'id': artwork.id,
-            'label': artwork.label,
-            'date': artwork.date,
-            'accession_no': artwork.accession_no,
-            'agents': agents,
-            'classifiers': [c.name for c in artwork.classifiers.all()],
-            'departments': [d.name for d in artwork.departments.all()],
-            'places': [p.label for p in artwork.places.all()],
-            'medium': artwork_refs.get('Medium'),
-            'dimensions': artwork_refs.get('Dimensions'),
-            'culture': artwork_refs.get('Culture'),
-            'period': artwork_refs.get('Period'),
-            'credit_line': artwork_refs.get('Credit Line'),
+        return Response({
+            'candidates': candidates,
+            'explanation': explanation,
         })
-
-    return Response({
-        'candidates': candidates,
-        'explanation': explanation,
-    })
+    except Exception:
+        return Response(
+            {'error': traceback.format_exc()},
+            status=status.HTTP_500_INTERNAL_SERVER_ERROR,
+        )
