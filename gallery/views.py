@@ -430,8 +430,8 @@ def daily_artwork(request):
                     'name': agent.name,
                     'role': prod.part,
                     'nationalities': nationalities,
-                    'begin_date': agent.begin_date.isoformat() if agent.begin_date else None,
-                    'end_date': agent.end_date.isoformat() if agent.end_date else None,
+                    'begin_date': str(agent.begin_date) if agent.begin_date else None,
+                    'end_date': str(agent.end_date) if agent.end_date else None,
                 })
 
             artwork_refs = refs.get(aid, {})
