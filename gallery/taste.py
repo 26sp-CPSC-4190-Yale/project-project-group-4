@@ -1,13 +1,20 @@
+import hashlib
 import math
 import re
+from collections import defaultdict
+from datetime import date
 
-from django.db.models import F, Q, Count
+from django.db.models import F, Q, Count, Sum, Case, When, Value, FloatField
 
 from .models import (
     Agent,
+    Artwork,
     Interaction,
     Match,
     Nationality,
+    ObjectClassifier,
+    ObjectDepartment,
+    Production,
     TasteSignal,
 )
 
@@ -16,6 +23,7 @@ MATCH_CHECK_INTERVAL = 15   # Number of swipes between match checks for a user
 MATCH_THRESHOLD = 0.3       # Minimum cosine similarity to consider a match
 MIN_EVIDENCE = 3            # Minimum total swipes for a facet value to be included in taste vector
 COLD_START_THRESHOLD = 20   # Minimum swipes for a user to be included in matching pool
+DAILY_CANDIDATES = 10       # Number of art-of-the-day candidates to return
 
 
 def parse_century(date_str):
@@ -194,3 +202,171 @@ def check_matches(user):
 
     if new_matches:
         Match.objects.bulk_create(new_matches, ignore_conflicts=True)
+
+
+def get_daily_artwork(user):
+    """
+    Return a list of top-scoring artwork IDs for this user today,
+    plus an explanation of which taste facets drove the pick.
+
+    Cold-start users (< COLD_START_THRESHOLD interactions) get the
+    globally most-liked artworks instead.
+    """
+    total_interactions = Interaction.objects.filter(user=user).count()
+
+    if total_interactions < COLD_START_THRESHOLD:
+        return _daily_cold_start(user), []
+
+    # Only include signals with enough evidence
+    signals = list(
+        TasteSignal.objects
+        .filter(user=user)
+        .annotate(total=F("like_count") + F("pass_count"))
+        .filter(total__gte=MIN_EVIDENCE)
+    )
+    if not signals:
+        return _daily_cold_start(user), []
+
+    signal_map = {(s.facet, s.value): s.score for s in signals}
+
+    # Subquery for excluding artworks the user has already seen
+    seen_subquery = (
+        Interaction.objects
+        .filter(user=user)
+        .values("artwork_id")
+    )
+
+    scores = defaultdict(float)
+
+    # Score each facet type using DB-side aggregation via Case/When,
+    # so only (artwork_id, score) pairs come back — not raw rows.
+    _score_facet(
+        scores, signal_map, "classifier",
+        ObjectClassifier.objects
+        .filter(classifier__name__in=_facet_values(signal_map, "classifier"))
+        .exclude(artwork_id__in=seen_subquery),
+        artwork_field="artwork_id",
+        value_lookup="classifier__name",
+    )
+
+    _score_facet(
+        scores, signal_map, "department",
+        ObjectDepartment.objects
+        .filter(department__name__in=_facet_values(signal_map, "department"))
+        .exclude(artwork_id__in=seen_subquery),
+        artwork_field="artwork_id",
+        value_lookup="department__name",
+    )
+
+    _score_facet(
+        scores, signal_map, "nationality",
+        Production.objects
+        .filter(agent__nationalities__descriptor__in=_facet_values(signal_map, "nationality"))
+        .exclude(artwork_id__in=seen_subquery),
+        artwork_field="artwork_id",
+        value_lookup="agent__nationalities__descriptor",
+        distinct=True,
+    )
+
+    # Century — only boost artworks already scored by other facets,
+    # since parsing date strings across 182k rows would be wasteful.
+    century_values = {v for (f, v) in signal_map if f == "century"}
+    if century_values and scores:
+        for artwork in (
+            Artwork.objects
+            .filter(id__in=scores.keys())
+            .exclude(date__isnull=True)
+            .only("id", "date")
+        ):
+            century = parse_century(artwork.date)
+            if century and str(century) in century_values:
+                scores[artwork.id] += signal_map[("century", str(century))]
+
+    if not scores:
+        return _daily_cold_start(user), []
+
+    # Deterministic daily tiebreaker so the same user sees the same pick all day
+    today = date.today().isoformat()
+
+    def daily_sort_key(item):
+        aid, score = item
+        tiebreak = hashlib.md5(f"{aid}{today}".encode()).hexdigest()
+        return (-score, tiebreak)
+
+    ranked = sorted(scores.items(), key=daily_sort_key)[:DAILY_CANDIDATES]
+    artwork_ids = [aid for aid, _ in ranked]
+
+    # Build explanation from the top-scoring artwork
+    top_artwork = Artwork.objects.get(id=artwork_ids[0])
+    explanation = _build_explanation(signal_map, top_artwork)
+
+    return artwork_ids, explanation
+
+
+def _facet_values(signal_map, facet):
+    """Extract the value list for a given facet from the signal map."""
+    return [v for (f, v) in signal_map if f == facet]
+
+
+def _score_facet(scores, signal_map, facet, queryset, artwork_field, value_lookup, distinct=False):
+    """
+    Aggregate artwork scores for a single facet type in the database.
+
+    Builds a Case/When expression mapping each facet value to its taste score,
+    then SUMs per artwork — so only (artwork_id, total_score) rows are returned.
+    """
+    values = _facet_values(signal_map, facet)
+    if not values:
+        return
+
+    score_expr = Case(
+        *[
+            When(**{value_lookup: v, "then": Value(signal_map[(facet, v)])})
+            for v in values
+        ],
+        output_field=FloatField(),
+    )
+
+    qs = queryset.values(artwork_field)
+    if distinct:
+        qs = qs.distinct()
+    rows = qs.annotate(facet_score=Sum(score_expr)).values_list(artwork_field, "facet_score")
+
+    for aid, facet_score in rows:
+        if facet_score:
+            scores[aid] += facet_score
+
+
+def _daily_cold_start(user):
+    """Return the most globally liked artwork IDs for cold-start users."""
+    seen_subquery = (
+        Interaction.objects
+        .filter(user=user)
+        .values("artwork_id")
+    )
+    popular = (
+        Interaction.objects
+        .filter(action="like")
+        .exclude(artwork_id__in=seen_subquery)
+        .values("artwork_id")
+        .annotate(like_count=Count("id"))
+        .order_by("-like_count")[:DAILY_CANDIDATES]
+    )
+    return [row["artwork_id"] for row in popular]
+
+
+def _build_explanation(signal_map, artwork):
+    """
+    Intersect an artwork's facet values with the user's taste signals
+    to explain why this artwork was recommended.
+    """
+    artwork_facets = get_artwork_facet_values(artwork)
+
+    explanation = []
+    for facet, value in artwork_facets:
+        score = signal_map.get((facet, value))
+        if score is not None and score > 0.5:
+            explanation.append({"facet": facet, "value": value, "score": round(score, 3)})
+
+    explanation.sort(key=lambda x: -x["score"])
+    return explanation

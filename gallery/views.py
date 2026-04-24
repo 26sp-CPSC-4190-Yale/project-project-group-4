@@ -8,9 +8,9 @@ from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
 from rest_framework import status
 from rest_framework.authtoken.models import Token
-from .models import Artwork, Interaction, Match, Message, TasteSignal
+from .models import Artwork, Interaction, Match, Message, Production, Reference, TasteSignal
 from .serializers import ArtworkSerializer, ArtworkDetailSerializer, UserSerializer, MessageSerializer
-from .taste import update_taste_signals, check_matches, MATCH_CHECK_INTERVAL
+from .taste import update_taste_signals, check_matches, get_daily_artwork, MATCH_CHECK_INTERVAL
 
 
 @api_view(['POST'])
@@ -367,3 +367,90 @@ def my_taste(request):
         for s in signals
     ]
     return Response({'signals': data})
+
+
+def _get_artwork_references(artwork_ids):
+    """Fetch reference metadata (medium, dimensions, etc.) for a set of artworks."""
+    useful_types = ('Medium', 'Dimensions', 'Culture', 'Period', 'Credit Line')
+    refs = Reference.objects.filter(artwork_id__in=artwork_ids, type__in=useful_types)
+    refs_by_id = {}
+    for ref in refs:
+        refs_by_id.setdefault(ref.artwork_id, {})[ref.type] = ref.content
+    return refs_by_id
+
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def daily_artwork(request):
+    """Return personalized art-of-the-day candidates with rich metadata."""
+    artwork_ids, explanation = get_daily_artwork(request.user)
+
+    if not artwork_ids:
+        return Response(
+            {'candidates': [], 'explanation': []},
+            status=status.HTTP_200_OK,
+        )
+
+    # Batch-load artworks with prefetched relations (avoids N+1)
+    artworks = (
+        Artwork.objects
+        .filter(id__in=artwork_ids)
+        .prefetch_related('classifiers', 'departments', 'places')
+    )
+    artwork_map = {a.id: a for a in artworks}
+
+    # Batch-load productions with agents and nationalities
+    productions = (
+        Production.objects
+        .filter(artwork_id__in=artwork_ids)
+        .select_related('agent')
+        .prefetch_related('agent__nationalities')
+    )
+    prods_by_artwork = {}
+    for prod in productions:
+        prods_by_artwork.setdefault(prod.artwork_id, []).append(prod)
+
+    # Batch-load references
+    refs = _get_artwork_references(artwork_ids)
+
+    # Serialize in score order
+    candidates = []
+    for aid in artwork_ids:
+        artwork = artwork_map.get(aid)
+        if not artwork:
+            continue
+
+        agents = []
+        for prod in prods_by_artwork.get(aid, []):
+            agent = prod.agent
+            nationalities = [n.descriptor for n in agent.nationalities.all()]
+            agents.append({
+                'name': agent.name,
+                'role': prod.part,
+                'nationalities': nationalities,
+                'begin_date': agent.begin_date.isoformat() if agent.begin_date else None,
+                'end_date': agent.end_date.isoformat() if agent.end_date else None,
+            })
+
+        artwork_refs = refs.get(aid, {})
+
+        candidates.append({
+            'id': artwork.id,
+            'label': artwork.label,
+            'date': artwork.date,
+            'accession_no': artwork.accession_no,
+            'agents': agents,
+            'classifiers': [c.name for c in artwork.classifiers.all()],
+            'departments': [d.name for d in artwork.departments.all()],
+            'places': [p.label for p in artwork.places.all()],
+            'medium': artwork_refs.get('Medium'),
+            'dimensions': artwork_refs.get('Dimensions'),
+            'culture': artwork_refs.get('Culture'),
+            'period': artwork_refs.get('Period'),
+            'credit_line': artwork_refs.get('Credit Line'),
+        })
+
+    return Response({
+        'candidates': candidates,
+        'explanation': explanation,
+    })

@@ -25,6 +25,9 @@ urlpatterns = [
     # Taste profile (requires auth)
     path('api/taste/me/', views.my_taste, name='my_taste'),
 
+    # Art of the Day (requires auth)
+    path('api/art-of-the-day/', views.daily_artwork, name='daily_artwork'),
+
     # Matches & messaging
     path('api/matches/', views.match_list, name='match_list'),
     path('api/matches/<int:user_id>/action/', views.match_action, name='match_action'),

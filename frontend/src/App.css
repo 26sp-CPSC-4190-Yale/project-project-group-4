@@ -926,6 +926,156 @@
   transform: translateY(-1px);
 }
 
+/* ── Art of the Day ── */
+
+.aotd-card {
+  max-width: 900px;
+  margin: 0 auto 32px;
+  padding: 0 20px;
+}
+
+.aotd-header {
+  margin-bottom: 14px;
+}
+
+.aotd-label {
+  font-size: 0.75em;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 2px;
+  color: var(--accent);
+}
+
+.aotd-image-wrap {
+  position: relative;
+  width: 100%;
+  border-radius: var(--radius-card);
+  overflow: hidden;
+  background: var(--bg-card);
+  border: 1px solid var(--border-subtle);
+  min-height: 200px;
+}
+
+.aotd-image {
+  width: 100%;
+  display: block;
+  border-radius: var(--radius-card);
+}
+
+.aotd-body {
+  padding: 20px 0 0;
+}
+
+.aotd-title {
+  margin: 0 0 6px;
+  font-family: var(--font-display);
+  font-size: 1.5em;
+  font-weight: 700;
+  line-height: 1.25;
+  color: var(--text-primary);
+}
+
+.aotd-artist {
+  margin: 0 0 16px;
+  font-size: 1em;
+  color: var(--accent);
+  line-height: 1.4;
+}
+
+.aotd-meta {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-bottom: 16px;
+}
+
+.aotd-meta-row {
+  display: flex;
+  gap: 12px;
+  font-size: 0.9em;
+  line-height: 1.4;
+}
+
+.aotd-meta-label {
+  flex: 0 0 100px;
+  color: var(--text-muted);
+  font-size: 0.85em;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.aotd-meta-value {
+  color: var(--text-secondary);
+  flex: 1;
+}
+
+.aotd-credit {
+  margin: 0 0 16px;
+  font-size: 0.82em;
+  color: var(--text-muted);
+  font-style: italic;
+}
+
+.aotd-explanation {
+  padding-top: 16px;
+  border-top: 1px solid var(--border-subtle);
+}
+
+.aotd-explanation-label {
+  display: block;
+  font-size: 0.8em;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  margin-bottom: 10px;
+}
+
+.aotd-explanation-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+/* Skeleton loading for Art of the Day */
+.aotd-skeleton-image {
+  width: 100%;
+  aspect-ratio: 4 / 3;
+  border-radius: var(--radius-card);
+  background: linear-gradient(
+    90deg,
+    var(--bg-card) 0%,
+    var(--bg-surface) 50%,
+    var(--bg-card) 100%
+  );
+  background-size: 200% 100%;
+  animation: profile-shimmer 1.4s ease-in-out infinite;
+}
+
+.aotd-skeleton-line {
+  height: 16px;
+  width: 75%;
+  border-radius: 8px;
+  margin-bottom: 10px;
+  background: linear-gradient(
+    90deg,
+    var(--bg-card) 0%,
+    var(--bg-surface) 50%,
+    var(--bg-card) 100%
+  );
+  background-size: 200% 100%;
+  animation: profile-shimmer 1.4s ease-in-out infinite;
+}
+
+.aotd-skeleton-title {
+  height: 22px;
+  width: 60%;
+  margin-top: 16px;
+}
+
+.aotd-skeleton-short {
+  width: 40%;
+}
+
 /* ── Profile Page ── */
 
 .profile-page {

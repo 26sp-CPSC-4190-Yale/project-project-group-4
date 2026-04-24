@@ -84,6 +84,20 @@ class AgentNationality(models.Model):
         db_table = "agents_nationalities"
 
 
+class Reference(models.Model):
+    id = models.IntegerField(primary_key=True)
+    artwork = models.ForeignKey(
+        "Artwork", on_delete=models.DO_NOTHING, db_column="obj_id",
+        related_name="references",
+    )
+    type = models.CharField(max_length=255)
+    content = models.TextField(blank=True, null=True)
+
+    class Meta:
+        managed = False
+        db_table = "references"
+
+
 class Artwork(models.Model):
     id = models.IntegerField(primary_key=True)
     label = models.TextField(blank=True, null=True)
