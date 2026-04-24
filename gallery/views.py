@@ -392,69 +392,69 @@ def daily_artwork(request):
         is_popular = len(explanation) == 0 and len(artwork_ids) > 0
 
     if not artwork_ids:
-            return Response(
-                {'candidates': [], 'explanation': []},
-                status=status.HTTP_200_OK,
-            )
-
-        # Batch-load artworks with prefetched relations (avoids N+1)
-        artworks = (
-            Artwork.objects
-            .filter(id__in=artwork_ids)
-            .prefetch_related('classifiers', 'departments', 'places')
+        return Response(
+            {'candidates': [], 'explanation': [], 'is_popular': is_popular},
+            status=status.HTTP_200_OK,
         )
-        artwork_map = {a.id: a for a in artworks}
 
-        # Batch-load productions with agents and nationalities
-        productions = (
-            Production.objects
-            .filter(artwork_id__in=artwork_ids)
-            .select_related('agent')
-            .prefetch_related('agent__nationalities')
-        )
-        prods_by_artwork = {}
-        for prod in productions:
-            prods_by_artwork.setdefault(prod.artwork_id, []).append(prod)
+    # Batch-load artworks with prefetched relations (avoids N+1)
+    artworks = (
+        Artwork.objects
+        .filter(id__in=artwork_ids)
+        .prefetch_related('classifiers', 'departments', 'places')
+    )
+    artwork_map = {a.id: a for a in artworks}
 
-        # Batch-load references
-        refs = _get_artwork_references(artwork_ids)
+    # Batch-load productions with agents and nationalities
+    productions = (
+        Production.objects
+        .filter(artwork_id__in=artwork_ids)
+        .select_related('agent')
+        .prefetch_related('agent__nationalities')
+    )
+    prods_by_artwork = {}
+    for prod in productions:
+        prods_by_artwork.setdefault(prod.artwork_id, []).append(prod)
 
-        # Serialize in score order
-        candidates = []
-        for aid in artwork_ids:
-            artwork = artwork_map.get(aid)
-            if not artwork:
-                continue
+    # Batch-load references
+    refs = _get_artwork_references(artwork_ids)
 
-            agents = []
-            for prod in prods_by_artwork.get(aid, []):
-                agent = prod.agent
-                nationalities = [n.descriptor for n in agent.nationalities.all()]
-                agents.append({
-                    'name': agent.name,
-                    'role': prod.part,
-                    'nationalities': nationalities,
-                    'begin_date': str(agent.begin_date) if agent.begin_date else None,
-                    'end_date': str(agent.end_date) if agent.end_date else None,
-                })
+    # Serialize in score order
+    candidates = []
+    for aid in artwork_ids:
+        artwork = artwork_map.get(aid)
+        if not artwork:
+            continue
 
-            artwork_refs = refs.get(aid, {})
-
-            candidates.append({
-                'id': artwork.id,
-                'label': artwork.label,
-                'date': artwork.date,
-                'accession_no': artwork.accession_no,
-                'agents': agents,
-                'classifiers': [c.name for c in artwork.classifiers.all()],
-                'departments': [d.name for d in artwork.departments.all()],
-                'places': [p.label for p in artwork.places.all()],
-                'medium': artwork_refs.get('Medium'),
-                'dimensions': artwork_refs.get('Dimensions'),
-                'culture': artwork_refs.get('Culture'),
-                'period': artwork_refs.get('Period'),
-                'credit_line': artwork_refs.get('Credit Line'),
+        agents = []
+        for prod in prods_by_artwork.get(aid, []):
+            agent = prod.agent
+            nationalities = [n.descriptor for n in agent.nationalities.all()]
+            agents.append({
+                'name': agent.name,
+                'role': prod.part,
+                'nationalities': nationalities,
+                'begin_date': str(agent.begin_date) if agent.begin_date else None,
+                'end_date': str(agent.end_date) if agent.end_date else None,
             })
+
+        artwork_refs = refs.get(aid, {})
+
+        candidates.append({
+            'id': artwork.id,
+            'label': artwork.label,
+            'date': artwork.date,
+            'accession_no': artwork.accession_no,
+            'agents': agents,
+            'classifiers': [c.name for c in artwork.classifiers.all()],
+            'departments': [d.name for d in artwork.departments.all()],
+            'places': [p.label for p in artwork.places.all()],
+            'medium': artwork_refs.get('Medium'),
+            'dimensions': artwork_refs.get('Dimensions'),
+            'culture': artwork_refs.get('Culture'),
+            'period': artwork_refs.get('Period'),
+            'credit_line': artwork_refs.get('Credit Line'),
+        })
 
     return Response({
         'candidates': candidates,
