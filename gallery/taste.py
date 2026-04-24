@@ -4,7 +4,7 @@ import re
 from collections import defaultdict
 from datetime import date
 
-from django.db.models import F, Q, Count, Sum, Case, When, Value, FloatField
+from django.db.models import F, Q, Count
 
 from .models import (
     Agent,
@@ -211,81 +211,111 @@ def get_daily_artwork(user):
 
     Cold-start users (< COLD_START_THRESHOLD interactions) get the
     globally most-liked artworks instead.
+
+    Uses a two-phase approach for performance on free-tier databases:
+    1. Candidate generation: find artworks matching the user's TOP signal (bounded)
+    2. Candidate scoring: score those candidates against all signals
     """
     total_interactions = Interaction.objects.filter(user=user).count()
 
     if total_interactions < COLD_START_THRESHOLD:
         return _daily_cold_start(user), []
 
-    # Only include signals with enough evidence
     signals = list(
         TasteSignal.objects
         .filter(user=user)
         .annotate(total=F("like_count") + F("pass_count"))
         .filter(total__gte=MIN_EVIDENCE)
+        .order_by("-score")
     )
     if not signals:
         return _daily_cold_start(user), []
 
     signal_map = {(s.facet, s.value): s.score for s in signals}
+    seen_subquery = Interaction.objects.filter(user=user).values("artwork_id")
 
-    # Subquery for excluding artworks the user has already seen
-    seen_subquery = (
-        Interaction.objects
-        .filter(user=user)
-        .values("artwork_id")
-    )
+    # Phase 1: Generate a bounded candidate set using the top signal per facet.
+    # Each query is a single join with a LIMIT — fast on any database.
+    candidate_ids = set()
+    MAX_PER_FACET = 500
 
+    cls_vals = [v for (f, v) in signal_map if f == "classifier"]
+    if cls_vals:
+        candidate_ids.update(
+            ObjectClassifier.objects
+            .filter(classifier__name__in=cls_vals)
+            .exclude(artwork_id__in=seen_subquery)
+            .values_list("artwork_id", flat=True)[:MAX_PER_FACET]
+        )
+
+    dept_vals = [v for (f, v) in signal_map if f == "department"]
+    if dept_vals:
+        candidate_ids.update(
+            ObjectDepartment.objects
+            .filter(department__name__in=dept_vals)
+            .exclude(artwork_id__in=seen_subquery)
+            .values_list("artwork_id", flat=True)[:MAX_PER_FACET]
+        )
+
+    nat_vals = [v for (f, v) in signal_map if f == "nationality"]
+    if nat_vals:
+        candidate_ids.update(
+            Production.objects
+            .filter(agent__nationalities__descriptor__in=nat_vals)
+            .exclude(artwork_id__in=seen_subquery)
+            .values_list("artwork_id", flat=True)
+            .distinct()[:MAX_PER_FACET]
+        )
+
+    if not candidate_ids:
+        return _daily_cold_start(user), []
+
+    # Phase 2: Score candidates against all signals.
+    # Queries are fast because artwork_id__in is a small bounded set.
     scores = defaultdict(float)
 
-    # Score each facet type using DB-side aggregation via Case/When,
-    # so only (artwork_id, score) pairs come back — not raw rows.
-    _score_facet(
-        scores, signal_map, "classifier",
-        ObjectClassifier.objects
-        .filter(classifier__name__in=_facet_values(signal_map, "classifier"))
-        .exclude(artwork_id__in=seen_subquery),
-        artwork_field="artwork_id",
-        value_lookup="classifier__name",
-    )
+    if cls_vals:
+        for aid, name in (
+            ObjectClassifier.objects
+            .filter(artwork_id__in=candidate_ids, classifier__name__in=cls_vals)
+            .values_list("artwork_id", "classifier__name")
+        ):
+            scores[aid] += signal_map[("classifier", name)]
 
-    _score_facet(
-        scores, signal_map, "department",
-        ObjectDepartment.objects
-        .filter(department__name__in=_facet_values(signal_map, "department"))
-        .exclude(artwork_id__in=seen_subquery),
-        artwork_field="artwork_id",
-        value_lookup="department__name",
-    )
+    if dept_vals:
+        for aid, name in (
+            ObjectDepartment.objects
+            .filter(artwork_id__in=candidate_ids, department__name__in=dept_vals)
+            .values_list("artwork_id", "department__name")
+        ):
+            scores[aid] += signal_map[("department", name)]
 
-    _score_facet(
-        scores, signal_map, "nationality",
-        Production.objects
-        .filter(agent__nationalities__descriptor__in=_facet_values(signal_map, "nationality"))
-        .exclude(artwork_id__in=seen_subquery),
-        artwork_field="artwork_id",
-        value_lookup="agent__nationalities__descriptor",
-        distinct=True,
-    )
+    if nat_vals:
+        for aid, descriptor in (
+            Production.objects
+            .filter(artwork_id__in=candidate_ids, agent__nationalities__descriptor__in=nat_vals)
+            .values_list("artwork_id", "agent__nationalities__descriptor")
+            .distinct()
+        ):
+            scores[aid] += signal_map[("nationality", descriptor)]
 
-    # Century — only boost artworks already scored by other facets,
-    # since parsing date strings across 182k rows would be wasteful.
-    century_values = {v for (f, v) in signal_map if f == "century"}
-    if century_values and scores:
+    # Century boost for already-scored candidates
+    century_vals = {v for (f, v) in signal_map if f == "century"}
+    if century_vals:
         for artwork in (
             Artwork.objects
-            .filter(id__in=scores.keys())
+            .filter(id__in=candidate_ids)
             .exclude(date__isnull=True)
             .only("id", "date")
         ):
             century = parse_century(artwork.date)
-            if century and str(century) in century_values:
+            if century and str(century) in century_vals:
                 scores[artwork.id] += signal_map[("century", str(century))]
 
     if not scores:
         return _daily_cold_start(user), []
 
-    # Deterministic daily tiebreaker so the same user sees the same pick all day
+    # Deterministic daily tiebreaker
     today = date.today().isoformat()
 
     def daily_sort_key(item):
@@ -296,45 +326,10 @@ def get_daily_artwork(user):
     ranked = sorted(scores.items(), key=daily_sort_key)[:DAILY_CANDIDATES]
     artwork_ids = [aid for aid, _ in ranked]
 
-    # Build explanation from the top-scoring artwork
     top_artwork = Artwork.objects.get(id=artwork_ids[0])
     explanation = _build_explanation(signal_map, top_artwork)
 
     return artwork_ids, explanation
-
-
-def _facet_values(signal_map, facet):
-    """Extract the value list for a given facet from the signal map."""
-    return [v for (f, v) in signal_map if f == facet]
-
-
-def _score_facet(scores, signal_map, facet, queryset, artwork_field, value_lookup, distinct=False):
-    """
-    Aggregate artwork scores for a single facet type in the database.
-
-    Builds a Case/When expression mapping each facet value to its taste score,
-    then SUMs per artwork — so only (artwork_id, total_score) rows are returned.
-    """
-    values = _facet_values(signal_map, facet)
-    if not values:
-        return
-
-    score_expr = Case(
-        *[
-            When(**{value_lookup: v, "then": Value(signal_map[(facet, v)])})
-            for v in values
-        ],
-        output_field=FloatField(),
-    )
-
-    qs = queryset.values(artwork_field)
-    if distinct:
-        qs = qs.distinct()
-    rows = qs.annotate(facet_score=Sum(score_expr)).values_list(artwork_field, "facet_score")
-
-    for aid, facet_score in rows:
-        if facet_score:
-            scores[aid] += facet_score
 
 
 def _daily_cold_start(user):
