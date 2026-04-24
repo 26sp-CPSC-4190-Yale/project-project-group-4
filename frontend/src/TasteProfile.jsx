@@ -20,20 +20,16 @@ export default function TasteProfile() {
     async function fetchTaste() {
       try {
         const headers = { Authorization: `Token ${token}` }
-        const [tasteRes, statsRes] = await Promise.all([
-          fetch(`${BASE_URL}/api/taste/me/`, { headers }),
-          fetch(`${BASE_URL}/api/profile/stats/`, { headers }),
-        ])
-
-        if (!tasteRes.ok || !statsRes.ok) throw new Error()
-
-        const [tasteData, statsData] = await Promise.all([
-          tasteRes.json(),
-          statsRes.json(),
-        ])
-
+        const tasteRes = await fetch(`${BASE_URL}/api/taste/me/`, { headers })
+        if (!tasteRes.ok) throw new Error()
+        const tasteData = await tasteRes.json()
         setSignals(tasteData.signals || [])
-        setStats(statsData)
+
+        // Stats fetch is optional — endpoint may not be deployed yet
+        try {
+          const statsRes = await fetch(`${BASE_URL}/api/profile/stats/`, { headers })
+          if (statsRes.ok) setStats(await statsRes.json())
+        } catch { /* stats unavailable */ }
       } catch {
         setError('Failed to load taste profile.')
       } finally {
