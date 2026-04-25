@@ -102,6 +102,15 @@ export default function TasteProfile() {
     }
   }, [candidateIndex, candidates.length, usedFallback, token])
 
+  function formatCentury(value) {
+    const n = parseInt(value, 10)
+    const abs = Math.abs(n)
+    const suffix = abs % 10 === 1 && abs !== 11 ? 'st'
+      : abs % 10 === 2 && abs !== 12 ? 'nd'
+      : abs % 10 === 3 && abs !== 13 ? 'rd' : 'th'
+    return `${abs}${suffix} century${n < 0 ? ' BC' : ''}`
+  }
+
   function formatAgent(agent) {
     let str = agent.name
     if (agent.role && agent.role !== 'Artist') {
@@ -224,7 +233,7 @@ export default function TasteProfile() {
                   <div className="aotd-explanation-tags">
                     {explanation.map(e => (
                       <span key={`${e.facet}-${e.value}`} className="taste-tag">
-                        {e.value}
+                        {e.facet === 'century' ? formatCentury(e.value) : e.value}
                       </span>
                     ))}
                   </div>
