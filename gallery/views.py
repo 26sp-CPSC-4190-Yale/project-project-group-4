@@ -306,11 +306,9 @@ def conversation(request, user_id):
 
     if request.method == 'GET':
         messages = Message.objects.filter(
-            sender=request.user, recipient=other_user
-        ) | Message.objects.filter(
-            sender=other_user, recipient=request.user
-        )
-        messages = messages.order_by('timestamp')
+            Q(sender=request.user, recipient=other_user) |
+            Q(sender=other_user, recipient=request.user)
+        ).order_by('timestamp')
         serializer = MessageSerializer(messages, many=True)
         return Response(serializer.data)
 
