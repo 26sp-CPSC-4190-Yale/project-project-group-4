@@ -209,10 +209,12 @@ class Match(models.Model):
     STATUS_PENDING = 'pending'
     STATUS_REQUESTED = 'requested'
     STATUS_ACCEPTED = 'accepted'
+    STATUS_DECLINED = 'declined'
     STATUS_CHOICES = [
         (STATUS_PENDING, 'Pending'),
         (STATUS_REQUESTED, 'Requested'),
         (STATUS_ACCEPTED, 'Accepted'),
+        (STATUS_DECLINED, 'Declined'),
     ]
 
     pk = models.CompositePrimaryKey("user1", "user2")
