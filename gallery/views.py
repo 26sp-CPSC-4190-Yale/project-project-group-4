@@ -10,6 +10,16 @@ from .models import Artwork, Interaction, Match, Message, Production, Reference,
 from .serializers import ArtworkSerializer, ArtworkDetailSerializer, UserSerializer, MessageSerializer
 from .taste import update_taste_signals, check_matches, get_daily_artwork, MATCH_CHECK_INTERVAL
 
+MAX_PAGE_LIMIT = 100
+MAX_MESSAGE_LENGTH = 5000
+
+
+def _clamp(value, lo, hi):
+    try:
+        return max(lo, min(int(value), hi))
+    except (TypeError, ValueError):
+        return lo
+
 
 @api_view(['POST'])
 @permission_classes([AllowAny])
@@ -145,8 +155,11 @@ def profile_stats(request):
 @permission_classes([IsAuthenticated])
 def liked_artworks(request):
     """Return artworks the current user has liked, paginated."""
-    limit = int(request.query_params.get('limit', 20))
-    offset = int(request.query_params.get('offset', 0))
+    limit = _clamp(request.query_params.get('limit', 20), 1, MAX_PAGE_LIMIT)
+    try:
+        offset = max(0, int(request.query_params.get('offset', 0)))
+    except (TypeError, ValueError):
+        offset = 0
 
     interactions = Interaction.objects.filter(
         user=request.user, action='like'
@@ -317,6 +330,8 @@ def conversation(request, user_id):
     text = request.data.get('text', '').strip()
     if not text:
         return Response({'error': 'text is required'}, status=status.HTTP_400_BAD_REQUEST)
+    if len(text) > MAX_MESSAGE_LENGTH:
+        return Response({'error': f'Message too long (max {MAX_MESSAGE_LENGTH} chars)'}, status=status.HTTP_400_BAD_REQUEST)
 
     message = Message.objects.create(sender=request.user, recipient=other_user, text=text)
     serializer = MessageSerializer(message)
@@ -328,7 +343,7 @@ def artwork_list(request):
     """
     Get random artworks, excluding IDs the client has already seen this session.
     """
-    limit = int(request.query_params.get('limit', 20))
+    limit = _clamp(request.query_params.get('limit', 20), 1, MAX_PAGE_LIMIT)
 
     qs = Artwork.objects.all()
     exclude = request.query_params.get('exclude', '')
