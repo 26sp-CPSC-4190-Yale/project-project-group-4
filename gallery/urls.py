@@ -7,9 +7,6 @@ urlpatterns = [
     path('api/auth/login/', views.login, name='login'),
     path('api/auth/logout/', views.logout, name='logout'),
 
-    # MVP Gallery View - fetch single artwork for display
-    path('api/artwork/', views.single_artwork, name='single_artwork'),
-
     # Fetch specific artwork by ID with interaction data
     path('api/artwork/<int:artwork_id>/', views.artwork_detail, name='artwork_detail'),
 
