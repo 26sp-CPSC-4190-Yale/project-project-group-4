@@ -187,7 +187,11 @@ def _top_facets(user_id, other_id, limit=3):
 def match_list(request):
     """Return the current user's matches with status and top shared facets."""
     me = request.user
-    matches = Match.objects.filter(Q(user1=me) | Q(user2=me)).select_related('user1', 'user2', 'requested_by')
+    matches = Match.objects.filter(
+        Q(user1=me) | Q(user2=me)
+    ).exclude(
+        status=Match.STATUS_DECLINED
+    ).select_related('user1', 'user2', 'requested_by')
 
     Match.objects.filter(user1=me, seen_by_user1=False).update(seen_by_user1=True)
     Match.objects.filter(user2=me, seen_by_user2=False).update(seen_by_user2=True)
@@ -236,11 +240,8 @@ def match_action(request, user_id):
     elif action == 'decline':
         if match.status != Match.STATUS_REQUESTED or match.requested_by_id == me.id:
             return Response({'error': 'No incoming request to decline'}, status=status.HTTP_400_BAD_REQUEST)
-        Message.objects.filter(
-            Q(sender=me, recipient_id=user_id) | Q(sender_id=user_id, recipient=me)
-        ).delete()
-        match.delete()
-        return Response(status=status.HTTP_204_NO_CONTENT)
+        match.status = Match.STATUS_DECLINED
+        match.save()
 
     return Response({'status': match.status})
 
