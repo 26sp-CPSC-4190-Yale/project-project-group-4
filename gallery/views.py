@@ -98,20 +98,6 @@ def record_interaction(request):
     )
 
 @api_view(['GET'])
-def single_artwork(request):
-    """
-    Get the first artwork in the database for the Gallery View.
-    """
-    artwork = Artwork.objects.first()
-    if not artwork:
-        return Response(
-            {'error': 'No artworks found in the database'},
-            status=status.HTTP_404_NOT_FOUND
-        )
-    serializer = ArtworkSerializer(artwork)
-    return Response(serializer.data)
-
-@api_view(['GET'])
 def artwork_detail(request, artwork_id):
     """
     Get a specific artwork by ID along with user interactions.
