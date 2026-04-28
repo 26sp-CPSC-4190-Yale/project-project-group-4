@@ -4,7 +4,28 @@ import { BASE_URL } from './constants'
 import Conversation from './Conversation'
 import MatchProfile from './MatchProfile'
 
+function FacetTags({ facets }) {
+  if (!facets || facets.length === 0) return null
+  return (
+    <div className="match-facets">
+      {facets.map((f, i) => <span key={i} className="match-facet-tag">{f.value}</span>)}
+    </div>
+  )
+}
 
+function MatchCard({ m, actions }) {
+  return (
+    <div className="match-card">
+      <span className="messages-user-avatar">{m.user.username[0].toUpperCase()}</span>
+      <div className="match-card-info">
+        <span className="messages-user-name">{m.user.username}</span>
+        <span className="match-similarity">{Math.round(m.similarity * 100)}% taste match</span>
+        <FacetTags facets={m.top_facets} />
+      </div>
+      <div className="match-actions">{actions}</div>
+    </div>
+  )
+}
 
 export default function Messages() {
   const { token } = useAuth()
@@ -60,29 +81,6 @@ export default function Messages() {
   const incoming = matches.filter(m => m.status === 'requested' && !m.requested_by_me)
   const sent = matches.filter(m => m.status === 'requested' && m.requested_by_me)
   const conversations = matches.filter(m => m.status === 'accepted')
-
-  function FacetTags({ facets }) {
-    if (!facets || facets.length === 0) return null
-    return (
-      <div className="match-facets">
-        {facets.map((f, i) => <span key={i} className="match-facet-tag">{f.value}</span>)}
-      </div>
-    )
-  }
-
-  function MatchCard({ m, actions }) {
-    return (
-      <div className="match-card">
-        <span className="messages-user-avatar">{m.user.username[0].toUpperCase()}</span>
-        <div className="match-card-info">
-          <span className="messages-user-name">{m.user.username}</span>
-          <span className="match-similarity">{Math.round(m.similarity * 100)}% taste match</span>
-          <FacetTags facets={m.top_facets} />
-        </div>
-        <div className="match-actions">{actions}</div>
-      </div>
-    )
-  }
 
   return (
     <div className="messages-page">
