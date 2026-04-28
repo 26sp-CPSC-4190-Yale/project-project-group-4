@@ -184,6 +184,30 @@ def _top_facets(user_id, other_id, limit=3):
     return shared[:limit]
 
 
+def _batch_top_facets(my_id, other_ids, limit=3):
+    """Top shared facets for multiple users in 2 queries total."""
+    if not other_ids:
+        return {}
+
+    my_sigs = {(s.facet, s.value): s.score for s in TasteSignal.objects.filter(user_id=my_id)}
+
+    other_sigs = {}
+    for s in TasteSignal.objects.filter(user_id__in=other_ids):
+        other_sigs.setdefault(s.user_id, {})[(s.facet, s.value)] = s.score
+
+    result = {}
+    for other_id in other_ids:
+        their = other_sigs.get(other_id, {})
+        shared = []
+        for key in set(my_sigs) & set(their):
+            facet, value = key
+            avg = (my_sigs[key] + their[key]) / 2
+            shared.append({'facet': facet, 'value': value, 'score': round(avg, 3)})
+        shared.sort(key=lambda x: -x['score'])
+        result[other_id] = shared[:limit]
+    return result
+
+
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def match_list(request):
@@ -198,16 +222,24 @@ def match_list(request):
     Match.objects.filter(user1=me, seen_by_user1=False).update(seen_by_user1=True)
     Match.objects.filter(user2=me, seen_by_user2=False).update(seen_by_user2=True)
 
-    result = []
+    match_pairs = []
+    other_ids = []
     for m in matches:
         other = m.user2 if m.user1_id == me.id else m.user1
+        match_pairs.append((m, other))
+        other_ids.append(other.id)
+
+    facets_by_user = _batch_top_facets(me.id, other_ids)
+
+    result = []
+    for m, other in match_pairs:
         result.append({
             'user': {'id': other.id, 'username': other.username},
             'similarity': round(m.similarity, 3),
             'status': m.status,
             'requested_by_me': m.requested_by_id == me.id if m.requested_by_id else False,
             'matched_at': m.matched_at.isoformat(),
-            'top_facets': _top_facets(me.id, other.id),
+            'top_facets': facets_by_user.get(other.id, []),
         })
     return Response(result)
 
