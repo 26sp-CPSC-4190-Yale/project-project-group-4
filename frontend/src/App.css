@@ -685,6 +685,22 @@
   padding: 0 4px;
 }
 
+.conversation-ended {
+  text-align: center;
+  padding: 20px 16px;
+  border-top: 1px solid var(--border-subtle);
+  color: var(--text-secondary);
+}
+.conversation-ended button {
+  margin-top: 8px;
+  padding: 8px 20px;
+  border-radius: 20px;
+  border: 1px solid var(--border-subtle);
+  background: var(--bg-surface);
+  color: var(--text-primary);
+  cursor: pointer;
+}
+
 .conversation-input-row {
   display: flex;
   gap: 10px;

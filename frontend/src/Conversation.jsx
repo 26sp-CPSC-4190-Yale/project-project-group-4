@@ -8,23 +8,31 @@ export default function Conversation({ otherUser, onBack, onUnmatch }) {
   const [messages, setMessages] = useState([])
   const [text, setText] = useState('')
   const [sending, setSending] = useState(false)
+  const [unmatched, setUnmatched] = useState(false)
   const bottomRef = useRef(null)
 
   async function fetchMessages() {
-    const res = await fetch(`${BASE_URL}/api/messages/${otherUser.id}/`, {
-      headers: { Authorization: `Token ${token}` },
-    })
-    if (res.ok) {
-      const data = await res.json()
-      setMessages(data)
-    }
+    try {
+      const res = await fetch(`${BASE_URL}/api/messages/${otherUser.id}/`, {
+        headers: { Authorization: `Token ${token}` },
+      })
+      if (res.status === 403) {
+        setUnmatched(true)
+        return
+      }
+      if (res.ok) {
+        const data = await res.json()
+        setMessages(data)
+      }
+    } catch { /* network error, will retry next poll */ }
   }
 
   useEffect(() => {
+    if (unmatched) return
     fetchMessages()
     const interval = setInterval(fetchMessages, POLL_INTERVAL)
     return () => clearInterval(interval)
-  }, [otherUser.id])
+  }, [otherUser.id, unmatched])
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' })
@@ -88,19 +96,26 @@ export default function Conversation({ otherUser, onBack, onUnmatch }) {
         <div ref={bottomRef} />
       </div>
 
-      <form className="conversation-input-row" onSubmit={handleSend}>
-        <input
-          className="conversation-input"
-          type="text"
-          placeholder="Type a message…"
-          value={text}
-          onChange={(e) => setText(e.target.value)}
-          disabled={sending}
-        />
-        <button className="conversation-send" type="submit" disabled={sending || !text.trim()}>
-          Send
-        </button>
-      </form>
+      {unmatched ? (
+        <div className="conversation-ended">
+          <p>This conversation is no longer available.</p>
+          <button onClick={onBack}>Back to Messages</button>
+        </div>
+      ) : (
+        <form className="conversation-input-row" onSubmit={handleSend}>
+          <input
+            className="conversation-input"
+            type="text"
+            placeholder="Type a message…"
+            value={text}
+            onChange={(e) => setText(e.target.value)}
+            disabled={sending}
+          />
+          <button className="conversation-send" type="submit" disabled={sending || !text.trim()}>
+            Send
+          </button>
+        </form>
+      )}
     </div>
   )
 }
