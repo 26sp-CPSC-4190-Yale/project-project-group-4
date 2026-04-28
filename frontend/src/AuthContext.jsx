@@ -1,4 +1,5 @@
 import { createContext, useContext, useState } from 'react'
+import { BASE_URL } from './constants'
 
 const AuthContext = createContext(null)
 
@@ -9,10 +10,8 @@ export function AuthProvider({ children }) {
     return stored ? JSON.parse(stored) : null
   })
 
-  const baseUrl = import.meta.env.VITE_API_URL || 'http://127.0.0.1:8000'
-
   async function login(username, password) {
-    const res = await fetch(`${baseUrl}/api/auth/login/`, {
+    const res = await fetch(`${BASE_URL}/api/auth/login/`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ username, password }),
@@ -29,7 +28,7 @@ export function AuthProvider({ children }) {
   }
 
   async function register(username, email, password) {
-    const res = await fetch(`${baseUrl}/api/auth/register/`, {
+    const res = await fetch(`${BASE_URL}/api/auth/register/`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ username, email, password }),
@@ -48,7 +47,7 @@ export function AuthProvider({ children }) {
 
   async function logout() {
     try {
-      await fetch(`${baseUrl}/api/auth/logout/`, {
+      await fetch(`${BASE_URL}/api/auth/logout/`, {
         method: 'POST',
         headers: { Authorization: `Token ${token}` },
       })

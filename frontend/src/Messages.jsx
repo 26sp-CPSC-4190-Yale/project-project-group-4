@@ -1,10 +1,10 @@
 import { useState, useEffect } from 'react'
 import { useAuth } from './AuthContext'
+import { BASE_URL } from './constants'
 import Conversation from './Conversation'
 import MatchProfile from './MatchProfile'
 
 
-const BASE_URL = import.meta.env.VITE_API_URL || 'http://127.0.0.1:8000'
 
 export default function Messages() {
   const { token } = useAuth()

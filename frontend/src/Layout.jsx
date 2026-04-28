@@ -1,7 +1,6 @@
 import { useState, useEffect } from 'react'
 import { useAuth } from './AuthContext'
-
-const BASE_URL = import.meta.env.VITE_API_URL || 'http://127.0.0.1:8000'
+import { BASE_URL } from './constants'
 const NOTIF_POLL_INTERVAL = 30000
 
 export default function Layout({ activeTab, onNavigate, children }) {

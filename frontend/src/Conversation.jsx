@@ -1,7 +1,6 @@
 import { useState, useEffect, useRef } from 'react'
 import { useAuth } from './AuthContext'
-
-const BASE_URL = import.meta.env.VITE_API_URL || 'http://127.0.0.1:8000'
+import { BASE_URL } from './constants'
 const POLL_INTERVAL = 4000
 
 export default function Conversation({ otherUser, onBack, onUnmatch }) {
