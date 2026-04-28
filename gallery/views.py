@@ -1,6 +1,8 @@
 import random
+import threading
 
 from django.contrib.auth import authenticate
+from django.db import close_old_connections
 from django.contrib.auth.models import User
 from django.db.models import Q
 from rest_framework.decorators import api_view, permission_classes
@@ -14,6 +16,14 @@ from .taste import update_taste_signals, check_matches, get_daily_artwork, MATCH
 
 MAX_PAGE_LIMIT = 100
 MAX_MESSAGE_LENGTH = 5000
+
+
+def _check_matches_background(user):
+    """Run check_matches in a background thread with proper DB cleanup."""
+    try:
+        check_matches(user)
+    finally:
+        close_old_connections()
 
 
 def _clamp(value, lo, hi):
@@ -89,10 +99,14 @@ def record_interaction(request):
             interaction.action = action
             interaction.save()
 
-    # Check for matches every N swipes
+    # Check for matches every N swipes (non-blocking)
     total_swipes = Interaction.objects.filter(user=request.user).count()
     if total_swipes % MATCH_CHECK_INTERVAL == 0:
-        check_matches(request.user)
+        threading.Thread(
+            target=_check_matches_background,
+            args=(request.user,),
+            daemon=True,
+        ).start()
 
     return Response(
         {'artwork_id': artwork_id, 'action': action, 'created': created},
