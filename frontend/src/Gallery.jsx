@@ -14,7 +14,7 @@ export default function Gallery() {
   const noMoreRef = useRef(false)
 
   // Swipe callback: runs after the exit animation completes
-  const { flipped, likeOpacity, passOpacity, cardProps, handleSwipe } = useSwipe(
+  const { flipped, likeOpacity, passOpacity, exiting, cardProps, handleSwipe } = useSwipe(
     direction => {
       const artwork = artworks[currentIndex]
       recordInteraction(artwork.id, direction === 'right' ? 'like' : 'pass')
@@ -61,6 +61,22 @@ export default function Gallery() {
 
   // Reset image readiness when moving to a new card
   useEffect(() => { setImageReady(false) }, [currentIndex])
+
+  // Keyboard shortcuts: Arrow keys and A/D for swiping
+  useEffect(() => {
+    function onKeyDown(e) {
+      if (exiting || !artworks[currentIndex]) return
+      if (e.key === 'ArrowRight' || e.key === 'd' || e.key === 'D') {
+        e.preventDefault()
+        handleSwipe('right')
+      } else if (e.key === 'ArrowLeft' || e.key === 'a' || e.key === 'A') {
+        e.preventDefault()
+        handleSwipe('left')
+      }
+    }
+    window.addEventListener('keydown', onKeyDown)
+    return () => window.removeEventListener('keydown', onKeyDown)
+  }, [exiting, currentIndex, artworks, handleSwipe])
 
   function skipCurrentArtwork() {
     setCurrentIndex(i => i + 1)
