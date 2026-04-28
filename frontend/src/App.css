@@ -313,6 +313,15 @@
   border: 2px solid rgba(0, 212, 106, 0.3);
 }
 
+.action-btn-undo {
+  width: 48px;
+  height: 48px;
+  font-size: 1.2em;
+  background: var(--bg-surface);
+  color: var(--accent);
+  border: 2px solid rgba(200, 169, 110, 0.3);
+}
+
 /* ── Counter ── */
 
 .gallery-counter {

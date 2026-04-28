@@ -13,8 +13,9 @@ urlpatterns = [
     # Fetch all artworks (with pagination support)
     path('api/artworks/', views.artwork_list, name='artwork_list'),
 
-    # Record a like/pass interaction (requires auth)
+    # Record or undo a like/pass interaction (requires auth)
     path('api/interactions/', views.record_interaction, name='record_interaction'),
+    path('api/interactions/<int:artwork_id>/', views.delete_interaction, name='delete_interaction'),
 
     # Get current user's liked artworks (requires auth)
     path('api/liked/', views.liked_artworks, name='liked_artworks'),

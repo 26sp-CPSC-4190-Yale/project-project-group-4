@@ -113,6 +113,23 @@ def record_interaction(request):
         status=status.HTTP_201_CREATED if created else status.HTTP_200_OK,
     )
 
+
+@api_view(['DELETE'])
+@permission_classes([IsAuthenticated])
+def delete_interaction(request, artwork_id):
+    """Undo a swipe: reverse taste signals and delete the interaction."""
+    try:
+        interaction = Interaction.objects.select_related('artwork').get(
+            user=request.user, artwork_id=artwork_id,
+        )
+    except Interaction.DoesNotExist:
+        return Response({'error': 'Interaction not found'}, status=status.HTTP_404_NOT_FOUND)
+
+    update_taste_signals(request.user, interaction.artwork, interaction.action, undo=True)
+    interaction.delete()
+    return Response(status=status.HTTP_204_NO_CONTENT)
+
+
 @api_view(['GET'])
 def artwork_detail(request, artwork_id):
     """

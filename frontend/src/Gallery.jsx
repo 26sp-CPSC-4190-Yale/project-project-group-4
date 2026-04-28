@@ -10,6 +10,7 @@ export default function Gallery() {
   const [error, setError] = useState(null)
 
   const [imageReady, setImageReady] = useState(false)
+  const [lastSwiped, setLastSwiped] = useState(null)
   const isFetchingRef = useRef(false)
   const noMoreRef = useRef(false)
 
@@ -17,7 +18,9 @@ export default function Gallery() {
   const { flipped, likeOpacity, passOpacity, exiting, cardProps, handleSwipe } = useSwipe(
     direction => {
       const artwork = artworks[currentIndex]
-      recordInteraction(artwork.id, direction === 'right' ? 'like' : 'pass')
+      const action = direction === 'right' ? 'like' : 'pass'
+      recordInteraction(artwork.id, action)
+      setLastSwiped({ artwork, action })
       setCurrentIndex(i => i + 1)
     }
   )
@@ -77,6 +80,18 @@ export default function Gallery() {
     window.addEventListener('keydown', onKeyDown)
     return () => window.removeEventListener('keydown', onKeyDown)
   }, [exiting, currentIndex, artworks, handleSwipe])
+
+  async function handleUndo() {
+    if (!lastSwiped) return
+    try {
+      await fetch(`${BASE_URL}/api/interactions/${lastSwiped.artwork.id}/`, {
+        method: 'DELETE',
+        headers: { Authorization: `Token ${token}` },
+      })
+    } catch { /* best-effort */ }
+    setCurrentIndex(i => i - 1)
+    setLastSwiped(null)
+  }
 
   function skipCurrentArtwork() {
     setCurrentIndex(i => i + 1)
@@ -147,6 +162,11 @@ export default function Gallery() {
             <button className="action-btn action-btn-pass" onClick={() => handleSwipe('left')}>
               ✕
             </button>
+            {lastSwiped && !exiting && (
+              <button className="action-btn action-btn-undo" onClick={handleUndo}>
+                ↩
+              </button>
+            )}
             <button className="action-btn action-btn-like" onClick={() => handleSwipe('right')}>
               ♥
             </button>
