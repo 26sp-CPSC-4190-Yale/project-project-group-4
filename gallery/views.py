@@ -1,3 +1,5 @@
+import random
+
 from django.contrib.auth import authenticate
 from django.contrib.auth.models import User
 from django.db.models import Q
@@ -324,24 +326,28 @@ def conversation(request, user_id):
 
 
 @api_view(['GET'])
+@permission_classes([IsAuthenticated])
 def artwork_list(request):
     """
-    Get random artworks, excluding IDs the client has already seen this session.
+    Get random artworks the user hasn't interacted with yet.
+    Falls back to the full pool when all artworks have been seen.
     """
     limit = _clamp(request.query_params.get('limit', 20), 1, MAX_PAGE_LIMIT)
 
-    qs = Artwork.objects.all()
-    exclude = request.query_params.get('exclude', '')
-    if exclude:
-        exclude_ids = [int(x) for x in exclude.split(',') if x.strip().isdigit()]
-        qs = qs.exclude(id__in=exclude_ids)
+    seen = Interaction.objects.filter(user=request.user).values('artwork_id')
+    unseen = Artwork.objects.exclude(id__in=seen)
+    all_ids = list(unseen.values_list('id', flat=True))
 
-    total = qs.count()
-    artworks = qs.order_by('?')[:limit]
+    if not all_ids:
+        all_ids = list(Artwork.objects.values_list('id', flat=True))
+
+    sample_ids = random.sample(all_ids, min(limit, len(all_ids)))
+    artworks = list(Artwork.objects.filter(id__in=sample_ids))
+
     serializer = ArtworkSerializer(artworks, many=True)
     return Response({
-        'count': total,
-        'results': serializer.data
+        'count': len(all_ids),
+        'results': serializer.data,
     })
 
 

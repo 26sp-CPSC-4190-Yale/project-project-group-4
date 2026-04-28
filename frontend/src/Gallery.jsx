@@ -11,7 +11,6 @@ export default function Gallery() {
 
   const [imageReady, setImageReady] = useState(false)
   const isFetchingRef = useRef(false)
-  const seenIdsRef = useRef(new Set())
   const noMoreRef = useRef(false)
 
   // Swipe callback: runs after the exit animation completes
@@ -27,9 +26,7 @@ export default function Gallery() {
     if (isFetchingRef.current || noMoreRef.current) return
     isFetchingRef.current = true
     try {
-      const exclude = [...seenIdsRef.current].join(',')
-      const params = `limit=20${exclude ? `&exclude=${exclude}` : ''}`
-      const res = await fetch(`${BASE_URL}/api/artworks/?${params}`, {
+      const res = await fetch(`${BASE_URL}/api/artworks/?limit=20`, {
         headers: { Authorization: `Token ${token}` },
       })
       if (!res.ok) throw new Error()
@@ -37,7 +34,6 @@ export default function Gallery() {
       if (data.results.length === 0) {
         noMoreRef.current = true
       } else {
-        data.results.forEach(a => seenIdsRef.current.add(a.id))
         setArtworks(prev => [...prev, ...data.results])
       }
     } catch {
