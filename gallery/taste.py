@@ -222,7 +222,7 @@ def check_matches(user):
     if my_norm == 0:
         return
 
-    new_matches = []
+    best_id, best_sim = None, -1
     for cand_id, cand_vector in candidate_vectors.items():
         dot = sum(
             my_vector.get(k, 0) * v for k, v in cand_vector.items()
@@ -233,14 +233,15 @@ def check_matches(user):
 
         similarity = dot / (my_norm * cand_norm)
 
-        if similarity >= MATCH_THRESHOLD:
-            u1, u2 = sorted([user.id, cand_id])
-            new_matches.append(
-                Match(user1_id=u1, user2_id=u2, similarity=similarity)
-            )
+        if similarity > best_sim:
+            best_id, best_sim = cand_id, similarity
 
-    if new_matches:
-        Match.objects.bulk_create(new_matches, ignore_conflicts=True)
+    if best_id is not None and best_sim >= MATCH_THRESHOLD:
+        u1, u2 = sorted([user.id, best_id])
+        Match.objects.get_or_create(
+            user1_id=u1, user2_id=u2,
+            defaults={'similarity': best_sim},
+        )
 
 
 def get_daily_artwork(user):
