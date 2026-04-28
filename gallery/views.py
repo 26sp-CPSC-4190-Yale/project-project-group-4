@@ -382,17 +382,14 @@ def artwork_list(request):
 
     seen = Interaction.objects.filter(user=request.user).values('artwork_id')
     unseen = Artwork.objects.exclude(id__in=seen)
-    all_ids = list(unseen.values_list('id', flat=True))
 
-    if not all_ids:
-        all_ids = list(Artwork.objects.values_list('id', flat=True))
+    artworks = list(unseen.order_by('?')[:limit])
 
-    sample_ids = random.sample(all_ids, min(limit, len(all_ids)))
-    artworks = list(Artwork.objects.filter(id__in=sample_ids))
+    if not artworks:
+        artworks = list(Artwork.objects.order_by('?')[:limit])
 
     serializer = ArtworkSerializer(artworks, many=True)
     return Response({
-        'count': len(all_ids),
         'results': serializer.data,
     })
 
