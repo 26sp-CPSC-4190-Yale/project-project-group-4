@@ -5,7 +5,6 @@ import { BASE_URL } from './constants'
 export default function TasteProfile() {
   const { token } = useAuth()
   const [signals, setSignals] = useState([])
-  const [stats, setStats] = useState(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
 
@@ -25,12 +24,6 @@ export default function TasteProfile() {
         if (!tasteRes.ok) throw new Error()
         const tasteData = await tasteRes.json()
         setSignals(tasteData.signals || [])
-
-        // Stats fetch is optional — endpoint may not be deployed yet
-        try {
-          const statsRes = await fetch(`${BASE_URL}/api/profile/stats/`, { headers })
-          if (statsRes.ok) setStats(await statsRes.json())
-        } catch { /* stats unavailable */ }
       } catch {
         setError('Failed to load taste profile.')
       } finally {
@@ -67,11 +60,6 @@ export default function TasteProfile() {
     })
     return result
   }, [signals])
-
-  const likeRate =
-    stats && stats.total_likes + stats.total_passes > 0
-      ? `${Math.round(stats.like_rate * 100)}%`
-      : '--'
 
   const dailyArt = candidates[candidateIndex] || null
   const allCandidatesFailed = candidateIndex >= candidates.length && candidates.length > 0
@@ -245,26 +233,6 @@ export default function TasteProfile() {
           </div>
         </div>
       ) : null}
-
-      {/* Stats */}
-      <section className="profile-stats">
-        <div className="profile-stat-card">
-          <p className="profile-stat-value">{stats?.total_likes ?? 0}</p>
-          <p className="profile-stat-label">Total Likes</p>
-        </div>
-        <div className="profile-stat-card">
-          <p className="profile-stat-value">{stats?.total_passes ?? 0}</p>
-          <p className="profile-stat-label">Total Passes</p>
-        </div>
-        <div className="profile-stat-card">
-          <p className="profile-stat-value">{likeRate}</p>
-          <p className="profile-stat-label">Like Rate</p>
-        </div>
-        <div className="profile-stat-card">
-          <p className="profile-stat-value">{signals.length}</p>
-          <p className="profile-stat-label">Top Signals</p>
-        </div>
-      </section>
 
       {/* Taste signal tags */}
       {Object.keys(grouped).length === 0 ? (
