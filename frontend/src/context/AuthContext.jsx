@@ -1,5 +1,5 @@
 import { createContext, useContext, useState } from 'react'
-import { BASE_URL } from './constants'
+import { BASE_URL } from '../lib/constants'
 
 const AuthContext = createContext(null)
 

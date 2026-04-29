@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react'
-import { useAuth } from './AuthContext'
-import useSwipe from './useSwipe'
-import { BASE_URL } from './constants'
+import { useAuth } from '../context/AuthContext'
+import useSwipe from '../hooks/useSwipe'
+import { BASE_URL } from '../lib/constants'
 
 export default function Gallery() {
   const { token } = useAuth()

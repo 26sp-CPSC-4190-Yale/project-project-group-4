@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
-import { useAuth } from './AuthContext'
-import { BASE_URL } from './constants'
+import { useAuth } from '../context/AuthContext'
+import { BASE_URL } from '../lib/constants'
 const NOTIF_POLL_INTERVAL = 30000
 
 export default function Layout({ activeTab, onNavigate, children }) {

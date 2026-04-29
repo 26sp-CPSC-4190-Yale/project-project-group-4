@@ -1,5 +1,5 @@
 import { useState, useRef } from 'react'
-import { SWIPE_THRESHOLD } from './constants'
+import { SWIPE_THRESHOLD } from '../lib/constants'
 
 /**
  * Custom hook for card swipe + tap-to-flip gesture handling.

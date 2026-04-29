@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
-import { useAuth } from './AuthContext'
-import { BASE_URL } from './constants'
+import { useAuth } from '../context/AuthContext'
+import { BASE_URL } from '../lib/constants'
 import Conversation from './Conversation'
 import MatchProfile from './MatchProfile'
 

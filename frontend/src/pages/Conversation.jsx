@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react'
-import { useAuth } from './AuthContext'
-import { BASE_URL } from './constants'
+import { useAuth } from '../context/AuthContext'
+import { BASE_URL } from '../lib/constants'
 const POLL_INTERVAL = 4000
 
 export default function Conversation({ otherUser, onBack, onUnmatch }) {
