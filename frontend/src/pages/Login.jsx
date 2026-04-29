@@ -1,10 +1,9 @@
 import { useState } from 'react'
-import { useAuth } from './AuthContext'
+import { useAuth } from '../context/AuthContext'
 
-export default function Register({ onSwitch }) {
-  const { register } = useAuth()
+export default function Login({ onSwitch }) {
+  const { login } = useAuth()
   const [username, setUsername] = useState('')
-  const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [error, setError] = useState(null)
   const [loading, setLoading] = useState(false)
@@ -14,7 +13,7 @@ export default function Register({ onSwitch }) {
     setError(null)
     setLoading(true)
     try {
-      await register(username, email, password)
+      await login(username, password)
     } catch (err) {
       setError(err.message)
     } finally {
@@ -31,7 +30,7 @@ export default function Register({ onSwitch }) {
         </div>
 
         <div className="auth-card">
-          <h2>Create account</h2>
+          <h2>Log in</h2>
           <form onSubmit={handleSubmit} className="auth-form">
             <input
               className="auth-input"
@@ -43,30 +42,22 @@ export default function Register({ onSwitch }) {
             />
             <input
               className="auth-input"
-              type="email"
-              placeholder="Email (optional)"
-              value={email}
-              onChange={e => setEmail(e.target.value)}
-            />
-            <input
-              className="auth-input"
               type="password"
-              placeholder="Password (min 8 characters)"
+              placeholder="Password"
               value={password}
               onChange={e => setPassword(e.target.value)}
               required
-              minLength={8}
             />
             {error && <p className="auth-error">{error}</p>}
             <button className="auth-submit" type="submit" disabled={loading}>
-              {loading ? 'Creating account...' : 'Register'}
+              {loading ? 'Logging in...' : 'Log in'}
             </button>
           </form>
         </div>
 
         <p className="auth-switch">
-          Already have an account?{' '}
-          <button onClick={onSwitch}>Log in</button>
+          Don't have an account?{' '}
+          <button onClick={onSwitch}>Register</button>
         </p>
       </div>
     </div>
