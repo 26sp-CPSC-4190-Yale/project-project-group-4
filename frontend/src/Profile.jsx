@@ -1,29 +1,38 @@
-import { useState, useEffect, useMemo } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useAuth } from './AuthContext'
-import { BASE_URL, FALLBACK_IMAGE } from './constants'
-import { buildEraBreakdown } from './dateUtils'
+import { BASE_URL } from './constants'
 
-const PROFILE_FETCH_LIMIT = 500
-
-export default function Profile({ onNavigate }) {
+export default function Profile() {
   const { token, user } = useAuth()
-  const [liked, setLiked] = useState([])
   const [stats, setStats] = useState(null)
+  const [bio, setBio] = useState('')
+  const [hasPhoto, setHasPhoto] = useState(false)
+  const [photoUrl, setPhotoUrl] = useState(null)
   const [loading, setLoading] = useState(true)
+  const [saving, setSaving] = useState(false)
   const [error, setError] = useState(null)
+  const [success, setSuccess] = useState(null)
+  const fileInputRef = useRef(null)
 
   useEffect(() => {
     async function fetchProfile() {
       const headers = { Authorization: `Token ${token}` }
       try {
-        const [likedRes, statsRes] = await Promise.all([
-          fetch(`${BASE_URL}/api/liked/?limit=${PROFILE_FETCH_LIMIT}&offset=0`, { headers }),
+        const [statsRes, profileRes] = await Promise.all([
           fetch(`${BASE_URL}/api/profile/stats/`, { headers }),
+          fetch(`${BASE_URL}/api/profile/me/`, { headers }),
         ])
-        if (!likedRes.ok || !statsRes.ok) throw new Error()
-        const [likedData, statsData] = await Promise.all([likedRes.json(), statsRes.json()])
-        setLiked(likedData.results)
+        if (!statsRes.ok || !profileRes.ok) throw new Error()
+        const [statsData, profileData] = await Promise.all([
+          statsRes.json(),
+          profileRes.json(),
+        ])
         setStats(statsData)
+        setBio(profileData.bio || '')
+        setHasPhoto(profileData.has_photo)
+        if (profileData.has_photo) {
+          setPhotoUrl(`${BASE_URL}/api/profile/photo/${user.id}/?t=${Date.now()}`)
+        }
       } catch {
         setError('Failed to load profile data.')
       } finally {
@@ -31,10 +40,58 @@ export default function Profile({ onNavigate }) {
       }
     }
     fetchProfile()
-  }, [token])
+  }, [token, user.id])
 
-  const recent = liked.slice(0, 8)
-  const eras = useMemo(() => buildEraBreakdown(liked), [liked])
+  async function handleSave() {
+    setSaving(true)
+    setError(null)
+    setSuccess(null)
+    try {
+      const formData = new FormData()
+      formData.append('bio', bio)
+      const res = await fetch(`${BASE_URL}/api/profile/me/`, {
+        method: 'PATCH',
+        headers: { Authorization: `Token ${token}` },
+        body: formData,
+      })
+      if (!res.ok) {
+        const data = await res.json()
+        throw new Error(data.error || 'Save failed')
+      }
+      setSuccess('Profile saved!')
+      setTimeout(() => setSuccess(null), 2000)
+    } catch (e) {
+      setError(e.message)
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  async function handlePhotoChange(e) {
+    const file = e.target.files?.[0]
+    if (!file) return
+    setSaving(true)
+    setError(null)
+    try {
+      const formData = new FormData()
+      formData.append('photo', file)
+      const res = await fetch(`${BASE_URL}/api/profile/me/`, {
+        method: 'PATCH',
+        headers: { Authorization: `Token ${token}` },
+        body: formData,
+      })
+      if (!res.ok) {
+        const data = await res.json()
+        throw new Error(data.error || 'Upload failed')
+      }
+      setHasPhoto(true)
+      setPhotoUrl(`${BASE_URL}/api/profile/photo/${user.id}/?t=${Date.now()}`)
+    } catch (e) {
+      setError(e.message)
+    } finally {
+      setSaving(false)
+    }
+  }
 
   const initial = user?.username?.[0]?.toUpperCase() ?? '?'
 
@@ -55,7 +112,31 @@ export default function Profile({ onNavigate }) {
       <h2 className="profile-title">Profile</h2>
 
       <section className="profile-account">
-        <div className="profile-avatar">{initial}</div>
+        <button
+          type="button"
+          className="profile-avatar-btn"
+          onClick={() => fileInputRef.current?.click()}
+          aria-label="Upload profile photo"
+        >
+          {photoUrl ? (
+            <img
+              className="profile-avatar-img"
+              src={photoUrl}
+              alt="Profile"
+              onError={() => setPhotoUrl(null)}
+            />
+          ) : (
+            <div className="profile-avatar">{initial}</div>
+          )}
+          <span className="profile-avatar-overlay">Edit</span>
+        </button>
+        <input
+          ref={fileInputRef}
+          type="file"
+          accept="image/jpeg,image/png,image/webp"
+          onChange={handlePhotoChange}
+          hidden
+        />
         <div className="profile-account-info">
           <p className="profile-username">{user?.username}</p>
           {user?.email && <p className="profile-email">{user.email}</p>}
@@ -94,76 +175,30 @@ export default function Profile({ onNavigate }) {
         </div>
       </section>
 
-      <section className="profile-eras">
-        <div className="profile-section-header">
-          <h3 className="profile-section-title">Eras You Love</h3>
+      <section className="profile-bio-section">
+        <h3 className="profile-section-title">About You</h3>
+        <textarea
+          className="profile-bio-input"
+          value={bio}
+          onChange={e => setBio(e.target.value)}
+          placeholder="Tell others about yourself..."
+          maxLength={500}
+          rows={4}
+        />
+        <div className="profile-bio-footer">
+          <span className="profile-bio-count">{bio.length}/500</span>
+          <button
+            className="profile-save-btn"
+            onClick={handleSave}
+            disabled={saving}
+          >
+            {saving ? 'Saving...' : 'Save'}
+          </button>
         </div>
-
-        {loading ? (
-          <div className="profile-era-list">
-            {Array.from({ length: 3 }).map((_, i) => (
-              <div key={i} className="profile-skeleton profile-skeleton-era" />
-            ))}
-          </div>
-        ) : eras.length === 0 ? (
-          <p className="profile-empty-sub">
-            Like a few artworks to see your era breakdown.
-          </p>
-        ) : (
-          <div className="profile-era-list">
-            {eras.map(({ label, count, percent }) => (
-              <div key={label} className="profile-era-row">
-                <span className="profile-era-label">{label}</span>
-                <div className="profile-era-bar-track">
-                  <div
-                    className="profile-era-bar-fill"
-                    style={{ width: `${Math.max(percent, 2)}%` }}
-                  />
-                </div>
-                <span className="profile-era-count">
-                  {count} · {percent}%
-                </span>
-              </div>
-            ))}
-          </div>
-        )}
       </section>
 
-      <section className="profile-recent">
-        <div className="profile-section-header">
-          <h3 className="profile-section-title">Recently Liked</h3>
-        </div>
-
-        {error && <p className="error-message">{error}</p>}
-
-        {loading ? (
-          <div className="profile-recent-strip">
-            {Array.from({ length: 6 }).map((_, i) => (
-              <div key={i} className="profile-skeleton profile-skeleton-thumb" />
-            ))}
-          </div>
-        ) : recent.length === 0 ? (
-          <p className="profile-empty">Nothing here yet — start swiping!</p>
-        ) : (
-          <div className="profile-recent-strip">
-            {recent.map(artwork => (
-              <button
-                key={artwork.id}
-                type="button"
-                className="profile-recent-item"
-                onClick={() => onNavigate?.('likes')}
-                aria-label={`Open My Likes — ${artwork.label}`}
-              >
-                <img
-                  src={`https://media.collections.yale.edu/thumbnail/yuag/obj/${artwork.id}`}
-                  alt={artwork.label}
-                  onError={e => { e.target.src = FALLBACK_IMAGE }}
-                />
-              </button>
-            ))}
-          </div>
-        )}
-      </section>
+      {error && <p className="error-message">{error}</p>}
+      {success && <p className="success-message">{success}</p>}
     </div>
   )
 }

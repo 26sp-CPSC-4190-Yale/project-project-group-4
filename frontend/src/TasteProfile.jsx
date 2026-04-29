@@ -1,12 +1,20 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useAuth } from './AuthContext'
-import { BASE_URL } from './constants'
+import { BASE_URL, FALLBACK_IMAGE } from './constants'
 
 export default function TasteProfile() {
   const { token } = useAuth()
   const [signals, setSignals] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
+
+  // Liked artworks state
+  const [likedArtworks, setLikedArtworks] = useState([])
+  const [likedTotal, setLikedTotal] = useState(0)
+  const [likedOffset, setLikedOffset] = useState(0)
+  const [likedLoading, setLikedLoading] = useState(true)
+  const [flippedCards, setFlippedCards] = useState(new Set())
+  const LIKED_PAGE_SIZE = 10
 
   // Art of the Day state
   const [candidates, setCandidates] = useState([])
@@ -15,6 +23,21 @@ export default function TasteProfile() {
   const [isPopular, setIsPopular] = useState(false)
   const [aotdLoading, setAotdLoading] = useState(true)
   const [imageReady, setImageReady] = useState(false)
+
+  async function fetchLiked(offset = 0) {
+    try {
+      const res = await fetch(
+        `${BASE_URL}/api/liked/?limit=${LIKED_PAGE_SIZE}&offset=${offset}`,
+        { headers: { Authorization: `Token ${token}` } },
+      )
+      if (!res.ok) throw new Error()
+      const data = await res.json()
+      setLikedArtworks(prev => offset === 0 ? data.results : [...prev, ...data.results])
+      setLikedTotal(data.count)
+      setLikedOffset(offset + data.results.length)
+    } catch { /* taste profile still shows */ }
+    finally { setLikedLoading(false) }
+  }
 
   useEffect(() => {
     async function fetchTaste() {
@@ -50,6 +73,7 @@ export default function TasteProfile() {
 
     fetchTaste()
     fetchDaily()
+    fetchLiked()
   }, [token])
 
   const grouped = useMemo(() => {
@@ -233,6 +257,78 @@ export default function TasteProfile() {
           </div>
         </div>
       ) : null}
+
+      {/* Liked artworks */}
+      <section className="taste-section">
+        <h3 className="taste-section-title">Liked Artworks</h3>
+        {likedLoading ? (
+          <p className="status-message">Loading...</p>
+        ) : likedArtworks.length === 0 ? (
+          <p className="likes-empty">
+            You haven't liked any artworks yet — start swiping to build your collection!
+          </p>
+        ) : (
+          <>
+            <div className="likes-grid">
+              {likedArtworks.map(artwork => {
+                const isFlipped = flippedCards.has(artwork.id)
+                return (
+                  <div
+                    key={artwork.id}
+                    className="likes-card"
+                    onClick={() => setFlippedCards(prev => {
+                      const next = new Set(prev)
+                      next.has(artwork.id) ? next.delete(artwork.id) : next.add(artwork.id)
+                      return next
+                    })}
+                  >
+                    <div
+                      className="likes-card-flipper"
+                      style={{ transform: isFlipped ? 'rotateY(180deg)' : 'none' }}
+                    >
+                      <div className="likes-card-face likes-card-front">
+                        <img
+                          src={`https://media.collections.yale.edu/thumbnail/yuag/obj/${artwork.id}`}
+                          alt={artwork.label}
+                          onError={e => { e.target.src = FALLBACK_IMAGE }}
+                        />
+                        <div className="likes-card-body">
+                          <p className="likes-card-title">{artwork.label}</p>
+                          {artwork.date && <p className="likes-card-date">{artwork.date}</p>}
+                        </div>
+                      </div>
+                      <div className="likes-card-face likes-card-back">
+                        <h3 className="likes-card-title">{artwork.label}</h3>
+                        {artwork.date && (
+                          <div className="likes-card-field">
+                            <span className="likes-card-field-label">Date</span>
+                            {artwork.date}
+                          </div>
+                        )}
+                        {artwork.accession_no && (
+                          <div className="likes-card-field">
+                            <span className="likes-card-field-label">Accession No.</span>
+                            {artwork.accession_no}
+                          </div>
+                        )}
+                        <div className="likes-card-source">Yale University Art Gallery</div>
+                      </div>
+                    </div>
+                  </div>
+                )
+              })}
+            </div>
+            {likedOffset < likedTotal && (
+              <button
+                className="load-more-btn"
+                onClick={() => fetchLiked(likedOffset)}
+              >
+                Load More
+              </button>
+            )}
+          </>
+        )}
+      </section>
 
       {/* Taste signal tags */}
       {Object.keys(grouped).length === 0 ? (

@@ -57,13 +57,6 @@ export default function Layout({ activeTab, onNavigate, children }) {
           Explore
         </button>
         <button
-          className={`tab-bar-item ${activeTab === 'likes' ? 'active' : ''}`}
-          onClick={() => onNavigate('likes')}
-        >
-          <span className="tab-bar-icon">♥</span>
-          My Likes
-        </button>
-        <button
           className={`tab-bar-item ${activeTab === 'taste' ? 'active' : ''}`}
           onClick={() => onNavigate('taste')}
         >

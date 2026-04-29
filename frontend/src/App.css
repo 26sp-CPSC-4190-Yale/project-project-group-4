@@ -480,16 +480,60 @@
 }
 
 .likes-card {
+  perspective: 800px;
+  cursor: pointer;
+}
+
+.likes-card-flipper {
+  position: relative;
   border-radius: 12px;
   overflow: hidden;
   background: var(--bg-card);
   border: 1px solid var(--border-subtle);
-  transition: transform 0.15s ease;
-  cursor: pointer;
+  transform-style: preserve-3d;
+  transition: transform 0.45s ease;
 }
 
-.likes-card:hover {
-  transform: translateY(-3px);
+.likes-card-face {
+  backface-visibility: hidden;
+}
+
+.likes-card-front {
+  display: block;
+}
+
+.likes-card-back {
+  position: absolute;
+  inset: 0;
+  transform: rotateY(180deg);
+  background: var(--bg-card);
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 10px;
+  overflow-y: auto;
+}
+
+.likes-card-field {
+  font-size: 0.85em;
+  color: var(--text-secondary);
+}
+
+.likes-card-field-label {
+  display: block;
+  font-size: 0.75em;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--accent);
+  margin-bottom: 2px;
+}
+
+.likes-card-source {
+  margin-top: auto;
+  font-size: 0.75em;
+  color: var(--text-secondary);
+  opacity: 0.6;
 }
 
 .likes-card img {
@@ -522,6 +566,23 @@
   margin-top: 80px;
   color: var(--text-secondary);
   font-size: 1.05em;
+}
+
+.load-more-btn {
+  display: block;
+  margin: 20px auto 0;
+  padding: 10px 28px;
+  background: var(--bg-surface);
+  color: var(--accent);
+  border: 1px solid var(--accent);
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 0.95em;
+  transition: background 0.15s ease;
+}
+
+.load-more-btn:hover {
+  background: rgba(200, 169, 110, 0.1);
 }
 
 /* ── Messages Page ── */
@@ -1128,6 +1189,43 @@
   margin-bottom: 20px;
 }
 
+.profile-avatar-btn {
+  position: relative;
+  width: 64px;
+  height: 64px;
+  border-radius: 50%;
+  overflow: hidden;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+  flex-shrink: 0;
+  background: none;
+}
+
+.profile-avatar-btn:hover .profile-avatar-overlay {
+  opacity: 1;
+}
+
+.profile-avatar-overlay {
+  position: absolute;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.5);
+  color: white;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.75em;
+  opacity: 0;
+  transition: opacity 0.2s ease;
+}
+
+.profile-avatar-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
 .profile-avatar {
   width: 64px;
   height: 64px;
@@ -1299,6 +1397,68 @@
   color: var(--text-muted);
   font-size: 0.9em;
   margin: 4px 0 0;
+}
+
+.profile-bio-section {
+  margin-top: 24px;
+}
+
+.profile-bio-input {
+  width: 100%;
+  box-sizing: border-box;
+  padding: 12px;
+  background: var(--bg-surface);
+  color: var(--text-primary);
+  border: 1px solid var(--border-subtle);
+  border-radius: 10px;
+  font-family: inherit;
+  font-size: 0.95em;
+  resize: vertical;
+  min-height: 80px;
+}
+
+.profile-bio-input:focus {
+  outline: none;
+  border-color: var(--accent);
+}
+
+.profile-bio-footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: 8px;
+}
+
+.profile-bio-count {
+  font-size: 0.8em;
+  color: var(--text-secondary);
+}
+
+.profile-save-btn {
+  padding: 8px 24px;
+  background: var(--accent);
+  color: var(--bg-page);
+  border: none;
+  border-radius: 8px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: opacity 0.15s ease;
+}
+
+.profile-save-btn:hover {
+  opacity: 0.85;
+}
+
+.profile-save-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.success-message {
+  text-align: center;
+  color: var(--color-like);
+  font-size: 0.9em;
+  margin-top: 12px;
 }
 
 /* ── Skeletons ── */

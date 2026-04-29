@@ -34,6 +34,8 @@ urlpatterns = [
     path('api/messages/<int:user_id>/', views.conversation, name='conversation'),
     path('api/notifications/', views.notifications, name='notifications'),
 
-    # Get current user's interaction stats (requires auth)
+    # Profile
     path('api/profile/stats/', views.profile_stats, name='profile_stats'),
+    path('api/profile/me/', views.user_profile, name='user_profile'),
+    path('api/profile/photo/<int:user_id>/', views.user_photo, name='user_photo'),
 ]

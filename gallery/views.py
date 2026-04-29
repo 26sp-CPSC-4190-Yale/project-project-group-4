@@ -10,7 +10,8 @@ from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
 from rest_framework import status
 from rest_framework.authtoken.models import Token
-from .models import Artwork, Interaction, Match, Message, Production, Reference, TasteSignal
+from django.http import HttpResponse
+from .models import Artwork, Interaction, Match, Message, Production, Reference, TasteSignal, UserProfile
 from .serializers import ArtworkSerializer, ArtworkDetailSerializer, UserSerializer, MessageSerializer
 from .taste import update_taste_signals, check_matches, get_daily_artwork, MATCH_CHECK_INTERVAL
 
@@ -40,6 +41,7 @@ def register(request):
     serializer = UserSerializer(data=request.data)
     if serializer.is_valid():
         user = serializer.save()
+        UserProfile.objects.get_or_create(user=user)
         token, _ = Token.objects.get_or_create(user=user)
         return Response({'token': token.key, 'user': serializer.data}, status=status.HTTP_201_CREATED)
     return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
@@ -168,6 +170,69 @@ def profile_stats(request):
         'first_interaction_at': first.isoformat() if first else None,
         'date_joined': request.user.date_joined.isoformat(),
     })
+
+
+MAX_PHOTO_SIZE = 2 * 1024 * 1024  # 2 MB
+ALLOWED_PHOTO_TYPES = {'image/jpeg', 'image/png', 'image/webp'}
+
+
+@api_view(['GET', 'PATCH'])
+@permission_classes([IsAuthenticated])
+def user_profile(request):
+    """Get or update the current user's profile (bio and photo)."""
+    profile, _ = UserProfile.objects.get_or_create(user=request.user)
+
+    if request.method == 'GET':
+        return Response({
+            'bio': profile.bio,
+            'has_photo': profile.photo_data is not None,
+        })
+
+    bio = request.data.get('bio')
+    if bio is not None:
+        profile.bio = bio[:500]
+
+    photo = request.FILES.get('photo')
+    if photo:
+        if photo.content_type not in ALLOWED_PHOTO_TYPES:
+            return Response(
+                {'error': 'Photo must be JPEG, PNG, or WebP'},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        if photo.size > MAX_PHOTO_SIZE:
+            return Response(
+                {'error': 'Photo must be under 2 MB'},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        from PIL import Image as PILImage
+        import io
+        img = PILImage.open(photo)
+        img.thumbnail((400, 400))
+        buf = io.BytesIO()
+        fmt = 'WEBP' if photo.content_type == 'image/webp' else ('PNG' if photo.content_type == 'image/png' else 'JPEG')
+        img.save(buf, format=fmt)
+        profile.photo_data = buf.getvalue()
+        profile.photo_content_type = photo.content_type
+
+    profile.save()
+    return Response({
+        'bio': profile.bio,
+        'has_photo': profile.photo_data is not None,
+    })
+
+
+@api_view(['GET'])
+def user_photo(request, user_id):
+    """Serve a user's profile photo as raw bytes."""
+    try:
+        profile = UserProfile.objects.get(user_id=user_id)
+    except UserProfile.DoesNotExist:
+        return Response(status=status.HTTP_404_NOT_FOUND)
+    if not profile.photo_data:
+        return Response(status=status.HTTP_404_NOT_FOUND)
+    response = HttpResponse(profile.photo_data, content_type=profile.photo_content_type)
+    response['Cache-Control'] = 'public, max-age=3600'
+    return response
 
 
 @api_view(['GET'])

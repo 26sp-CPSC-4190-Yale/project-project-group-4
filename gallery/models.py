@@ -241,3 +241,10 @@ class Message(models.Model):
 
     class Meta:
         ordering = ['timestamp']
+
+
+class UserProfile(models.Model):
+    user = models.OneToOneField(User, on_delete=models.CASCADE, related_name='profile')
+    bio = models.TextField(max_length=500, blank=True, default='')
+    photo_data = models.BinaryField(null=True, blank=True)
+    photo_content_type = models.CharField(max_length=50, null=True, blank=True)

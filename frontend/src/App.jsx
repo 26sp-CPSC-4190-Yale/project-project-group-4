@@ -4,7 +4,6 @@ import Login from './Login'
 import Register from './Register'
 import Layout from './Layout'
 import Gallery from './Gallery'
-import LikedArt from './LikedArt'
 import Messages from './Messages'
 import TasteProfile from './TasteProfile'
 import Profile from './Profile'
@@ -21,10 +20,9 @@ function AuthGate() {
   }
 
   function renderView() {
-    if (view === 'likes') return <LikedArt />
     if (view === 'taste') return <TasteProfile />
     if (view === 'messages') return <Messages />
-    if (view === 'profile') return <Profile onNavigate={setView} />
+    if (view === 'profile') return <Profile />
     return <Gallery />
   }
 
