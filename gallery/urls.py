@@ -30,6 +30,7 @@ urlpatterns = [
     path('api/matches/', views.match_list, name='match_list'),
     path('api/matches/<int:user_id>/action/', views.match_action, name='match_action'),
     path('api/matches/<int:user_id>/facets/', views.match_facets, name='match_facets'),
+    path('api/matches/<int:user_id>/common-likes/', views.common_likes, name='common_likes'),
     path('api/matches/<int:user_id>/', views.unmatch, name='unmatch'),
     path('api/messages/<int:user_id>/', views.conversation, name='conversation'),
     path('api/notifications/', views.notifications, name='notifications'),

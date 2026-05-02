@@ -101,6 +101,10 @@ def record_interaction(request):
             interaction.action = action
             interaction.save()
 
+    # Bust caches that depend on interactions
+    from django.core.cache import cache
+    cache.delete_many([f"taste_{request.user.id}", f"profile_stats_{request.user.id}"])
+
     # Check for matches every N swipes (non-blocking)
     total_swipes = Interaction.objects.filter(user=request.user).count()
     if total_swipes % MATCH_CHECK_INTERVAL == 0:
@@ -129,6 +133,10 @@ def delete_interaction(request, artwork_id):
 
     update_taste_signals(request.user, interaction.artwork, interaction.action, undo=True)
     interaction.delete()
+
+    from django.core.cache import cache
+    cache.delete_many([f"taste_{request.user.id}", f"profile_stats_{request.user.id}"])
+
     return Response(status=status.HTTP_204_NO_CONTENT)
 
 
@@ -152,6 +160,13 @@ def artwork_detail(request, artwork_id):
 @permission_classes([IsAuthenticated])
 def profile_stats(request):
     """Return the current user's interaction stats for the profile page."""
+    from django.core.cache import cache
+
+    cache_key = f"profile_stats_{request.user.id}"
+    cached = cache.get(cache_key)
+    if cached:
+        return Response(cached)
+
     interactions = Interaction.objects.filter(user=request.user)
     total_likes = interactions.filter(action='like').count()
     total_passes = interactions.filter(action='pass').count()
@@ -163,13 +178,15 @@ def profile_stats(request):
         .first()
     )
 
-    return Response({
+    data = {
         'total_likes': total_likes,
         'total_passes': total_passes,
         'like_rate': like_rate,
         'first_interaction_at': first.isoformat() if first else None,
         'date_joined': request.user.date_joined.isoformat(),
-    })
+    }
+    cache.set(cache_key, data, timeout=30)
+    return Response(data)
 
 
 MAX_PHOTO_SIZE = 2 * 1024 * 1024  # 2 MB
@@ -277,7 +294,7 @@ def _top_facets(user_id, other_id, limit=3):
         avg = (my_sigs[key] + their_sigs[key]) / 2
         shared.append({'facet': facet, 'value': value, 'score': round(avg, 3)})
     shared.sort(key=lambda x: -x['score'])
-    return shared[:limit]
+    return shared[:limit] if limit else shared
 
 
 def _batch_top_facets(my_id, other_ids, limit=3):
@@ -373,6 +390,10 @@ def match_action(request, user_id):
         match.status = Match.STATUS_DECLINED
         match.save()
 
+    # Bust notification caches for both users
+    from django.core.cache import cache
+    cache.delete_many([f"notifications_{request.user.id}", f"notifications_{user_id}"])
+
     return Response({'status': match.status})
 
 
@@ -399,13 +420,55 @@ def match_facets(request, user_id):
     match = _get_match(request.user, user_id)
     if not match:
         return Response({'error': 'Match not found'}, status=status.HTTP_404_NOT_FOUND)
-    return Response(_top_facets(request.user.id, user_id))
+    return Response(_top_facets(request.user.id, user_id, limit=None))
+
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+def common_likes(request, user_id):
+    """Return artworks that both the current user and another matched user have liked."""
+    match = _get_match(request.user, user_id)
+    if not match or match.status == Match.STATUS_DECLINED:
+        return Response({'error': 'Match not found'}, status=status.HTTP_404_NOT_FOUND)
+
+    limit = _clamp(request.query_params.get('limit', 20), 1, MAX_PAGE_LIMIT)
+    try:
+        offset = max(0, int(request.query_params.get('offset', 0)))
+    except (TypeError, ValueError):
+        offset = 0
+
+    their_likes = Interaction.objects.filter(
+        user_id=user_id, action='like',
+    ).values('artwork_id')
+
+    common = Interaction.objects.filter(
+        user=request.user, action='like', artwork_id__in=their_likes,
+    ).select_related('artwork').order_by('-timestamp')
+
+    total = common.count()
+    page = common[offset:offset + limit]
+    artworks = [i.artwork for i in page]
+
+    serializer = ArtworkSerializer(artworks, many=True)
+    return Response({
+        'count': total,
+        'limit': limit,
+        'offset': offset,
+        'results': serializer.data,
+    })
 
 
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def notifications(request):
     """Return counts of unseen new matches and incoming message requests."""
+    from django.core.cache import cache
+
+    cache_key = f"notifications_{request.user.id}"
+    cached = cache.get(cache_key)
+    if cached:
+        return Response(cached)
+
     me = request.user
 
     new_matches = Match.objects.filter(
@@ -418,7 +481,9 @@ def notifications(request):
         status=Match.STATUS_REQUESTED,
     ).exclude(requested_by=me).count()
 
-    return Response({'new_matches': new_matches, 'pending_requests': pending_requests})
+    data = {'new_matches': new_matches, 'pending_requests': pending_requests}
+    cache.set(cache_key, data, timeout=10)
+    return Response(data)
 
 
 @api_view(['GET', 'POST'])
@@ -480,22 +545,32 @@ def artwork_list(request):
 @permission_classes([IsAuthenticated])
 def my_taste(request):
     """Return the current user's top taste signals for debugging / profile display."""
+    from django.core.cache import cache
+
+    cache_key = f"taste_{request.user.id}"
+    cached = cache.get(cache_key)
+    if cached:
+        return Response(cached)
+
     signals = (
         TasteSignal.objects
         .filter(user=request.user)
         .order_by('-score')[:20]
     )
-    data = [
-        {
-            'facet': s.facet,
-            'value': s.value,
-            'score': round(s.score, 3),
-            'likes': s.like_count,
-            'passes': s.pass_count,
-        }
-        for s in signals
-    ]
-    return Response({'signals': data})
+    data = {
+        'signals': [
+            {
+                'facet': s.facet,
+                'value': s.value,
+                'score': round(s.score, 3),
+                'likes': s.like_count,
+                'passes': s.pass_count,
+            }
+            for s in signals
+        ]
+    }
+    cache.set(cache_key, data, timeout=30)
+    return Response(data)
 
 
 def _get_artwork_references(artwork_ids):
@@ -512,8 +587,20 @@ def _get_artwork_references(artwork_ids):
 @permission_classes([IsAuthenticated])
 def daily_artwork(request):
     """Return personalized art-of-the-day candidates with rich metadata."""
-    is_popular = request.query_params.get('fallback') == 'true'
-    if is_popular:
+    from datetime import date as _date
+    from django.core.cache import cache
+
+    is_fallback = request.query_params.get('fallback') == 'true'
+
+    # Check cache for non-fallback requests
+    if not is_fallback:
+        cache_key = f"daily_artwork_{request.user.id}_{_date.today()}"
+        cached = cache.get(cache_key)
+        if cached:
+            return Response(cached)
+
+    is_popular = is_fallback
+    if is_fallback:
         from .taste import _daily_cold_start
         artwork_ids, explanation = _daily_cold_start(request.user), []
     else:
@@ -585,8 +672,14 @@ def daily_artwork(request):
             'credit_line': artwork_refs.get('Credit Line'),
         })
 
-    return Response({
+    data = {
         'candidates': candidates,
         'explanation': explanation,
         'is_popular': is_popular,
-    })
+    }
+
+    # Cache for 24 hours (non-fallback only)
+    if not is_fallback:
+        cache.set(cache_key, data, timeout=86400)
+
+    return Response(data)

@@ -486,16 +486,16 @@
 
 .likes-card-flipper {
   position: relative;
-  border-radius: 12px;
-  overflow: hidden;
-  background: var(--bg-card);
-  border: 1px solid var(--border-subtle);
   transform-style: preserve-3d;
   transition: transform 0.45s ease;
 }
 
 .likes-card-face {
   backface-visibility: hidden;
+  border-radius: 12px;
+  overflow: hidden;
+  background: var(--bg-card);
+  border: 1px solid var(--border-subtle);
 }
 
 .likes-card-front {
@@ -506,7 +506,6 @@
   position: absolute;
   inset: 0;
   transform: rotateY(180deg);
-  background: var(--bg-card);
   padding: 16px;
   display: flex;
   flex-direction: column;
@@ -553,6 +552,13 @@
   font-size: 0.95em;
   font-weight: 600;
   line-height: 1.3;
+}
+
+.likes-card-front .likes-card-title {
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
 }
 
 .likes-card-date {
@@ -894,6 +900,20 @@
   max-width: 120px;
 }
 
+.common-likes-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(80px, 1fr));
+  gap: 8px;
+}
+
+.common-likes-item img {
+  width: 100%;
+  aspect-ratio: 1;
+  object-fit: cover;
+  border-radius: 8px;
+  display: block;
+}
+
 .match-actions {
   display: flex;
   flex-direction: column;
@@ -1010,6 +1030,15 @@
 
 .taste-tag:hover {
   transform: translateY(-1px);
+}
+
+.taste-tag-strong {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+.taste-tag-muted {
+  opacity: 0.5;
 }
 
 /* ── Art of the Day ── */
