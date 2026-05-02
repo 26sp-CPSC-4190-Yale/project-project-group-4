@@ -65,6 +65,20 @@ export default function Gallery() {
   // Reset image readiness when moving to a new card
   useEffect(() => { setImageReady(false) }, [currentIndex])
 
+  // Preload the next 3 artwork images so they're cached by the browser
+  useEffect(() => {
+    const preloaded = []
+    for (let i = 1; i <= 3; i++) {
+      const next = artworks[currentIndex + i]
+      if (next) {
+        const img = new Image()
+        img.src = `https://media.collections.yale.edu/thumbnail/yuag/obj/${next.id}`
+        preloaded.push(img)
+      }
+    }
+    return () => { preloaded.length = 0 }
+  }, [currentIndex, artworks])
+
   // Keyboard shortcuts: Arrow keys and A/D for swiping
   useEffect(() => {
     function onKeyDown(e) {
