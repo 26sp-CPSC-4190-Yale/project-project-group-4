@@ -62,8 +62,22 @@ export default function Gallery() {
     if (artworks.length > 0 && currentIndex >= artworks.length - 5) fetchMore()
   }, [currentIndex, artworks.length])
 
-  // Reset image readiness when moving to a new card
-  useEffect(() => { setImageReady(false) }, [currentIndex])
+  // Track load state for the current artwork. Using a separate Image() instance
+  // is more reliable than the JSX img's onLoad: when the displayed <img>'s src
+  // swaps to a URL that's already cached, the load event may not re-fire on the
+  // existing element, leaving imageReady stuck at false.
+  useEffect(() => {
+    const artwork = artworks[currentIndex]
+    if (!artwork) return
+    setImageReady(false)
+    let cancelled = false
+    const img = new Image()
+    img.onload = () => { if (!cancelled) setImageReady(true) }
+    img.onerror = () => { if (!cancelled) skipCurrentArtwork() }
+    img.src = `https://media.collections.yale.edu/thumbnail/yuag/obj/${artwork.id}`
+    if (img.complete && img.naturalWidth > 0) setImageReady(true)
+    return () => { cancelled = true }
+  }, [currentIndex, artworks])
 
   // Preload the next 3 artwork images so they're cached by the browser
   useEffect(() => {
@@ -138,7 +152,6 @@ export default function Gallery() {
                     className="card-image"
                     src={`https://media.collections.yale.edu/thumbnail/yuag/obj/${artwork.id}`}
                     alt={artwork.label}
-                    onLoad={() => setImageReady(true)}
                     onError={skipCurrentArtwork}
                     style={{ opacity: imageReady ? 1 : 0, transition: 'opacity 0.3s ease' }}
                     draggable={false}
