@@ -70,6 +70,48 @@ def logout(request):
 
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
+def change_password(request):
+    """
+    Change the current user's password and rotate the auth token.
+
+    Request body: { "current_password": "...", "new_password": "..." }
+    On success returns a new token; the old token is deleted.
+    """
+    from django.contrib.auth.password_validation import validate_password
+    from django.core.exceptions import ValidationError as DjangoValidationError
+
+    current_password = request.data.get('current_password')
+    new_password = request.data.get('new_password')
+
+    if not current_password or not new_password:
+        return Response(
+            {'error': 'current_password and new_password are required'},
+            status=status.HTTP_400_BAD_REQUEST,
+        )
+
+    user = request.user
+    if not user.check_password(current_password):
+        return Response(
+            {'error': 'Current password is incorrect'},
+            status=status.HTTP_400_BAD_REQUEST,
+        )
+
+    try:
+        validate_password(new_password, user)
+    except DjangoValidationError as exc:
+        return Response({'error': exc.messages}, status=status.HTTP_400_BAD_REQUEST)
+
+    user.set_password(new_password)
+    user.save()
+
+    # Rotate token so other sessions are invalidated immediately
+    Token.objects.filter(user=user).delete()
+    new_token = Token.objects.create(user=user)
+    return Response({'token': new_token.key}, status=status.HTTP_200_OK)
+
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
 def record_interaction(request):
     """Record a like or pass for an artwork, update taste signals, and check for matches."""
     artwork_id = request.data.get('artwork_id')
