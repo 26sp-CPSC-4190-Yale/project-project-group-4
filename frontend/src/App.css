@@ -322,6 +322,15 @@
   border: 2px solid rgba(200, 169, 110, 0.3);
 }
 
+.action-btn:disabled {
+  cursor: not-allowed;
+  opacity: 0.4;
+}
+
+.action-btn:disabled:active {
+  transform: none;
+}
+
 /* ── Counter ── */
 
 .gallery-counter {

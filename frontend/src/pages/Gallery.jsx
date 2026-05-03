@@ -176,11 +176,13 @@ export default function Gallery() {
             <button className="action-btn action-btn-pass" onClick={() => handleSwipe('left')}>
               ✕
             </button>
-            {lastSwiped && !exiting && (
-              <button className="action-btn action-btn-undo" onClick={handleUndo}>
-                ↩
-              </button>
-            )}
+            <button
+              className="action-btn action-btn-undo"
+              onClick={handleUndo}
+              disabled={!lastSwiped || exiting}
+            >
+              ↩
+            </button>
             <button className="action-btn action-btn-like" onClick={() => handleSwipe('right')}>
               ♥
             </button>
