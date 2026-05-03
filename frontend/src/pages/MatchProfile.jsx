@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo } from 'react'
-import { useAuth } from './AuthContext'
-import { BASE_URL, FALLBACK_IMAGE } from './constants'
+import { useAuth } from '../context/AuthContext'
+import { BASE_URL, FALLBACK_IMAGE } from '../lib/constants'
 
 export default function MatchProfile({ match, onBack, onMessage }) {
   const { token } = useAuth()
