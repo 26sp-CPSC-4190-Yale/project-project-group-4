@@ -103,14 +103,22 @@ export default function Conversation({ otherUser, onBack, onUnmatch }) {
         </div>
       ) : (
         <form className="conversation-input-row" onSubmit={handleSend}>
-          <input
-            className="conversation-input"
-            type="text"
-            placeholder="Type a message…"
-            value={text}
-            onChange={(e) => setText(e.target.value)}
-            disabled={sending}
-          />
+          <div className="conversation-input-wrapper">
+            <input
+              className="conversation-input"
+              type="text"
+              placeholder="Type a message…"
+              value={text}
+              onChange={(e) => setText(e.target.value.slice(0, 5000))}
+              maxLength={5000}
+              disabled={sending}
+            />
+            {text.length > 4500 && (
+              <span className={`char-counter${text.length > 4900 ? ' char-counter-danger' : ''}`}>
+                {text.length}/5000
+              </span>
+            )}
+          </div>
           <button className="conversation-send" type="submit" disabled={sending || !text.trim()}>
             Send
           </button>

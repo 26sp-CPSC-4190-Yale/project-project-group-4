@@ -3,7 +3,7 @@ import { useAuth } from '../context/AuthContext'
 import { BASE_URL } from '../lib/constants'
 
 export default function Profile() {
-  const { token, user } = useAuth()
+  const { token, user, login, changePassword } = useAuth()
   const [stats, setStats] = useState(null)
   const [bio, setBio] = useState('')
   const [hasPhoto, setHasPhoto] = useState(false)
@@ -13,6 +13,13 @@ export default function Profile() {
   const [error, setError] = useState(null)
   const [success, setSuccess] = useState(null)
   const fileInputRef = useRef(null)
+
+  const [currentPw, setCurrentPw] = useState('')
+  const [newPw, setNewPw] = useState('')
+  const [confirmPw, setConfirmPw] = useState('')
+  const [pwSaving, setPwSaving] = useState(false)
+  const [pwError, setPwError] = useState(null)
+  const [pwSuccess, setPwSuccess] = useState(null)
 
   useEffect(() => {
     async function fetchProfile() {
@@ -199,6 +206,58 @@ export default function Profile() {
 
       {error && <p className="error-message">{error}</p>}
       {success && <p className="success-message">{success}</p>}
+
+      <section className="profile-password-section">
+        <h3 className="profile-section-title">Change Password</h3>
+        <input
+          className="profile-pw-input"
+          type="password"
+          placeholder="Current password"
+          value={currentPw}
+          onChange={e => setCurrentPw(e.target.value)}
+        />
+        <input
+          className="profile-pw-input"
+          type="password"
+          placeholder="New password (min 8 characters)"
+          value={newPw}
+          onChange={e => setNewPw(e.target.value)}
+        />
+        <input
+          className="profile-pw-input"
+          type="password"
+          placeholder="Confirm new password"
+          value={confirmPw}
+          onChange={e => setConfirmPw(e.target.value)}
+        />
+        {pwError && <p className="error-message">{pwError}</p>}
+        {pwSuccess && <p className="success-message">{pwSuccess}</p>}
+        <button
+          className="profile-save-btn"
+          disabled={pwSaving}
+          onClick={async () => {
+            setPwError(null)
+            setPwSuccess(null)
+            if (newPw !== confirmPw) { setPwError('Passwords do not match'); return }
+            if (newPw.length < 8) { setPwError('New password must be at least 8 characters'); return }
+            setPwSaving(true)
+            try {
+              await changePassword(currentPw, newPw)
+              setCurrentPw('')
+              setNewPw('')
+              setConfirmPw('')
+              setPwSuccess('Password changed!')
+              setTimeout(() => setPwSuccess(null), 3000)
+            } catch (e) {
+              setPwError(e.message)
+            } finally {
+              setPwSaving(false)
+            }
+          }}
+        >
+          {pwSaving ? 'Changing...' : 'Change Password'}
+        </button>
+      </section>
     </div>
   )
 }

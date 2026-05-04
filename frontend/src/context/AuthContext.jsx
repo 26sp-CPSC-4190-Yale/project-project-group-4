@@ -1,4 +1,4 @@
-import { createContext, useContext, useState } from 'react'
+import { createContext, useContext, useState, useCallback } from 'react'
 import { BASE_URL } from '../lib/constants'
 
 const AuthContext = createContext(null)
@@ -9,6 +9,14 @@ export function AuthProvider({ children }) {
     const stored = localStorage.getItem('user')
     return stored ? JSON.parse(stored) : null
   })
+
+  // Clears all local auth state — called on explicit logout and on token expiry.
+  const _clearAuth = useCallback(() => {
+    localStorage.removeItem('token')
+    localStorage.removeItem('user')
+    setToken(null)
+    setUser(null)
+  }, [])
 
   async function login(username, password) {
     const res = await fetch(`${BASE_URL}/api/auth/login/`, {
@@ -52,14 +60,61 @@ export function AuthProvider({ children }) {
         headers: { Authorization: `Token ${token}` },
       })
     } catch { /* server logout is best-effort */ }
-    localStorage.removeItem('token')
-    localStorage.removeItem('user')
-    setToken(null)
-    setUser(null)
+    _clearAuth()
+  }
+
+  /**
+   * Change the current user's password.
+   * On success the old token is invalidated server-side; the new token
+   * returned by the server is stored so the user stays logged in.
+   *
+   * Throws an Error with a human-readable message on failure.
+   */
+  async function changePassword(currentPassword, newPassword) {
+    const res = await fetch(`${BASE_URL}/api/auth/change-password/`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Token ${token}`,
+      },
+      body: JSON.stringify({
+        current_password: currentPassword,
+        new_password: newPassword,
+      }),
+    })
+    if (!res.ok) {
+      const err = await res.json()
+      const msg = Array.isArray(err.error) ? err.error.join(' ') : (err.error || 'Password change failed')
+      throw new Error(msg)
+    }
+    const data = await res.json()
+    // Store the fresh token so the user stays authenticated
+    localStorage.setItem('token', data.token)
+    setToken(data.token)
+  }
+
+  /**
+   * Convenience wrapper for authenticated API calls.
+   * Automatically attaches the Authorization header and, when the server
+   * returns 401 (expired or revoked token), clears auth state so the app
+   * redirects to login.
+   */
+  async function authFetch(url, options = {}) {
+    const res = await fetch(url, {
+      ...options,
+      headers: {
+        ...(options.headers || {}),
+        Authorization: `Token ${token}`,
+      },
+    })
+    if (res.status === 401) {
+      _clearAuth()
+    }
+    return res
   }
 
   return (
-    <AuthContext.Provider value={{ token, user, login, register, logout }}>
+    <AuthContext.Provider value={{ token, user, login, register, logout, changePassword, authFetch }}>
       {children}
     </AuthContext.Provider>
   )

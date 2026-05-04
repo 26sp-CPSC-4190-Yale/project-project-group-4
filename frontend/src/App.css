@@ -794,8 +794,25 @@
   flex-shrink: 0;
 }
 
-.conversation-input {
+.conversation-input-wrapper {
   flex: 1;
+  position: relative;
+}
+.char-counter {
+  position: absolute;
+  right: 12px;
+  top: -18px;
+  font-size: 0.7em;
+  color: var(--text-secondary);
+}
+.char-counter-danger {
+  color: #e74c3c;
+  font-weight: 600;
+}
+
+.conversation-input {
+  width: 100%;
+  box-sizing: border-box;
   padding: 12px 14px;
   font-size: 0.95em;
   border-radius: 22px;
@@ -1492,6 +1509,28 @@
   cursor: not-allowed;
 }
 
+.profile-password-section {
+  padding: 0 20px;
+  margin-top: 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.profile-pw-input {
+  padding: 10px 14px;
+  border-radius: 8px;
+  border: 1px solid var(--border-subtle);
+  background: var(--bg-surface);
+  color: var(--text-primary);
+  font-family: inherit;
+  font-size: 0.95em;
+  outline: none;
+  transition: border-color 0.2s;
+}
+.profile-pw-input:focus {
+  border-color: var(--accent);
+}
+
 .success-message {
   text-align: center;
   color: var(--color-like);
@@ -1541,4 +1580,27 @@
   margin-top: 40px;
   color: var(--text-secondary);
   font-size: 0.95em;
+}
+
+/* ── Error Boundary ── */
+.error-boundary {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 100dvh;
+  text-align: center;
+  padding: 20px;
+  color: var(--text-primary);
+}
+.error-boundary h2 { margin-bottom: 8px; }
+.error-boundary p { color: var(--text-secondary); margin-bottom: 24px; }
+.error-boundary button {
+  padding: 10px 28px;
+  border-radius: 8px;
+  border: none;
+  background: var(--accent);
+  color: #fff;
+  font-size: 1rem;
+  cursor: pointer;
 }

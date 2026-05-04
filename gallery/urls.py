@@ -6,6 +6,7 @@ urlpatterns = [
     path('api/auth/register/', views.register, name='register'),
     path('api/auth/login/', views.login, name='login'),
     path('api/auth/logout/', views.logout, name='logout'),
+    path('api/auth/change-password/', views.change_password, name='change_password'),
 
     # Fetch specific artwork by ID with interaction data
     path('api/artwork/<int:artwork_id>/', views.artwork_detail, name='artwork_detail'),

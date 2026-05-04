@@ -42,7 +42,7 @@ Swipe right on art you like, left on art you don't. The app builds a taste profi
 | Frontend | React 19, Vite 7 |
 | Backend | Django 6, Django REST Framework 3 |
 | Database | PostgreSQL (app data) + read-only Yale LUX SQLite (artwork data) |
-| Auth | DRF Token Authentication |
+| Auth | DRF Token Authentication (24-hour expiry) |
 | Package management | npm (frontend), uv / pyproject.toml (backend) |
 
 ---
@@ -64,10 +64,12 @@ project-project-group-4/
 ├── gallery/                # Django app
 │   ├── migrations/
 │   ├── models.py           # Interaction, TasteSignal, Match, Message, UserProfile
+│   ├── auth.py             # ExpiringTokenAuthentication (24-hour TTL)
 │   ├── taste.py            # Taste signal extraction, Bayesian scoring, match engine
 │   ├── views.py
 │   ├── serializers.py
-│   └── urls.py
+│   ├── urls.py
+│   └── tests.py            # Full test suite (75 tests)
 ├── backend/                # Django project config
 │   ├── settings.py
 │   └── urls.py
@@ -110,6 +112,18 @@ python manage.py runserver
 
 The API will be available at `http://127.0.0.1:8000`.
 
+### Running the test suite
+
+```bash
+# First run — creates the test database
+python manage.py test gallery --verbosity=2
+
+# Subsequent runs — reuse the existing test DB (faster)
+python manage.py test gallery --verbosity=2 --keepdb
+```
+
+75 tests cover: auth (register, login, logout, token expiry, password change), interactions, taste signals, artwork endpoints, matches, messaging, notifications, and profile.
+
 ### Frontend
 
 ```bash
@@ -137,6 +151,7 @@ cp .env.example .env
 | `DATABASE_URL` | — | PostgreSQL connection string (required) |
 | `ALLOWED_HOSTS` | `127.0.0.1,localhost` | Comma-separated allowed hostnames |
 | `CORS_ALLOWED_ORIGINS` | `http://localhost:5173` | Comma-separated allowed CORS origins |
+| `TOKEN_EXPIRY_HOURS` | `24` | Hours before an auth token is invalidated |
 
 To point the frontend at a backend running on a different host or port, create `frontend/.env`:
 
@@ -150,11 +165,14 @@ VITE_API_URL=http://127.0.0.1:8000
 
 ### Authentication
 
-| Method | Endpoint | Description |
-|---|---|---|
-| `POST` | `/api/auth/register/` | Create an account — returns an auth token |
-| `POST` | `/api/auth/login/` | Sign in — returns an auth token |
-| `POST` | `/api/auth/logout/` | Revoke the current token |
+| Method | Endpoint | Auth | Description |
+|---|---|---|---|
+| `POST` | `/api/auth/register/` | — | Create an account — returns an auth token |
+| `POST` | `/api/auth/login/` | — | Sign in — returns an auth token |
+| `POST` | `/api/auth/logout/` | Required | Revoke the current token |
+| `POST` | `/api/auth/change-password/` | Required | Change password; old token is invalidated and a new one returned |
+
+Auth tokens expire after **24 hours**. A `401` response with `code: "token_expired"` means the user must log in again to obtain a fresh token.
 
 ### Artworks & Interactions
 
