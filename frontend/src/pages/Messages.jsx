@@ -3,12 +3,15 @@ import { useAuth } from '../context/AuthContext'
 import { BASE_URL } from '../lib/constants'
 import Conversation from './Conversation'
 import MatchProfile from './MatchProfile'
+import { formatFacetValue } from '../lib/format'
 
 function FacetTags({ facets }) {
   if (!facets || facets.length === 0) return null
   return (
     <div className="match-facets">
-      {facets.map((f, i) => <span key={i} className="match-facet-tag">{f.value}</span>)}
+      {facets.map((f, i) => (
+        <span key={i} className="match-facet-tag">{formatFacetValue(f.facet, f.value)}</span>
+      ))}
     </div>
   )
 }

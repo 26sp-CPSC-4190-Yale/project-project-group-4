@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useAuth } from '../context/AuthContext'
 import { BASE_URL, FALLBACK_IMAGE } from '../lib/constants'
+import { formatCentury } from '../lib/format'
 
 export default function TasteProfile() {
   const { token, authFetch } = useAuth()
@@ -107,15 +108,6 @@ export default function TasteProfile() {
         .catch(() => {})
     }
   }, [candidateIndex, candidates.length, usedFallback, token])
-
-  function formatCentury(value) {
-    const n = parseInt(value, 10)
-    const abs = Math.abs(n)
-    const suffix = abs % 10 === 1 && abs !== 11 ? 'st'
-      : abs % 10 === 2 && abs !== 12 ? 'nd'
-      : abs % 10 === 3 && abs !== 13 ? 'rd' : 'th'
-    return `${abs}${suffix} century${n < 0 ? ' BC' : ''}`
-  }
 
   function formatAgent(agent) {
     let str = agent.name

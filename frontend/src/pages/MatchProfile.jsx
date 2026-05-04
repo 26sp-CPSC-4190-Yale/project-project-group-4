@@ -1,12 +1,15 @@
 import { useState, useEffect, useMemo } from 'react'
 import { useAuth } from '../context/AuthContext'
 import { BASE_URL, FALLBACK_IMAGE } from '../lib/constants'
+import { formatFacetValue } from '../lib/format'
 
 export default function MatchProfile({ match, onBack, onMessage }) {
   const { token, authFetch } = useAuth()
   const [facets, setFacets] = useState(null)
   const [commonArt, setCommonArt] = useState([])
   const [commonTotal, setCommonTotal] = useState(0)
+  const [profile, setProfile] = useState(null)
+  const [photoFailed, setPhotoFailed] = useState(false)
 
   useEffect(() => {
     async function fetchFacets() {
@@ -25,8 +28,17 @@ export default function MatchProfile({ match, onBack, onMessage }) {
         }
       } catch { /* silent */ }
     }
+    async function fetchProfile() {
+      try {
+        const res = await authFetch(`${BASE_URL}/api/matches/${match.user.id}/profile/`)
+        if (res.ok) setProfile(await res.json())
+      } catch { /* silent — header still shows username */ }
+    }
+    setPhotoFailed(false)
+    setProfile(null)
     fetchFacets()
     fetchCommonLikes()
+    fetchProfile()
   }, [match.user.id, token])
 
   const allFacets = facets ?? match.top_facets ?? []
@@ -51,7 +63,16 @@ export default function MatchProfile({ match, onBack, onMessage }) {
       <button className="conversation-back" onClick={onBack}>←</button>
 
       <section className="profile-account">
-        <div className="profile-avatar">{match.user.username[0].toUpperCase()}</div>
+        {profile?.has_photo && !photoFailed ? (
+          <img
+            className="profile-avatar-img"
+            src={`${BASE_URL}/api/profile/photo/${match.user.id}/`}
+            alt={`${match.user.username} profile`}
+            onError={() => setPhotoFailed(true)}
+          />
+        ) : (
+          <div className="profile-avatar">{match.user.username[0].toUpperCase()}</div>
+        )}
         <div className="profile-account-info">
           <p className="profile-username">{match.user.username}</p>
           <p className="profile-since">
@@ -59,6 +80,13 @@ export default function MatchProfile({ match, onBack, onMessage }) {
           </p>
         </div>
       </section>
+
+      {profile?.bio && (
+        <section className="profile-bio-section">
+          <h3 className="profile-section-title">About {match.user.username}</h3>
+          <p className="match-profile-bio">{profile.bio}</p>
+        </section>
+      )}
 
       <section className="profile-stats">
         <div className="profile-stat-card">
@@ -80,7 +108,7 @@ export default function MatchProfile({ match, onBack, onMessage }) {
             <div className="taste-tags">
               {values.map(f => (
                 <span key={f.value} className={strengthClass(f.score)}>
-                  {f.value}
+                  {formatFacetValue(f.facet, f.value)}
                 </span>
               ))}
             </div>

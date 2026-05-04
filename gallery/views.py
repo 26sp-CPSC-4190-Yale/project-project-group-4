@@ -470,6 +470,24 @@ def match_facets(request, user_id):
 
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
+def match_user_profile(request, user_id):
+    """Return another user's bio, photo flag, and username — gated by match presence."""
+    if not _get_match(request.user, user_id):
+        return Response({'error': 'Match not found'}, status=status.HTTP_404_NOT_FOUND)
+    try:
+        other = User.objects.get(id=user_id)
+    except User.DoesNotExist:
+        return Response(status=status.HTTP_404_NOT_FOUND)
+    profile, _ = UserProfile.objects.get_or_create(user=other)
+    return Response({
+        'username': other.username,
+        'bio': profile.bio,
+        'has_photo': profile.photo_data is not None,
+    })
+
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
 def common_likes(request, user_id):
     """Return artworks that both the current user and another matched user have liked."""
     match = _get_match(request.user, user_id)
