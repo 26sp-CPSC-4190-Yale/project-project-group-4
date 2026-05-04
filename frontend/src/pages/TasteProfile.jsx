@@ -3,7 +3,7 @@ import { useAuth } from '../context/AuthContext'
 import { BASE_URL, FALLBACK_IMAGE } from '../lib/constants'
 
 export default function TasteProfile() {
-  const { token } = useAuth()
+  const { token, authFetch } = useAuth()
   const [signals, setSignals] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
@@ -26,9 +26,8 @@ export default function TasteProfile() {
 
   async function fetchLiked(offset = 0) {
     try {
-      const res = await fetch(
+      const res = await authFetch(
         `${BASE_URL}/api/liked/?limit=${LIKED_PAGE_SIZE}&offset=${offset}`,
-        { headers: { Authorization: `Token ${token}` } },
       )
       if (!res.ok) throw new Error()
       const data = await res.json()
@@ -42,8 +41,7 @@ export default function TasteProfile() {
   useEffect(() => {
     async function fetchTaste() {
       try {
-        const headers = { Authorization: `Token ${token}` }
-        const tasteRes = await fetch(`${BASE_URL}/api/taste/me/`, { headers })
+        const tasteRes = await authFetch(`${BASE_URL}/api/taste/me/`)
         if (!tasteRes.ok) throw new Error()
         const tasteData = await tasteRes.json()
         setSignals(tasteData.signals || [])
@@ -56,9 +54,7 @@ export default function TasteProfile() {
 
     async function fetchDaily() {
       try {
-        const res = await fetch(`${BASE_URL}/api/art-of-the-day/`, {
-          headers: { Authorization: `Token ${token}` },
-        })
+        const res = await authFetch(`${BASE_URL}/api/art-of-the-day/`)
         if (!res.ok) throw new Error()
         const data = await res.json()
         setCandidates(data.candidates || [])
@@ -98,9 +94,7 @@ export default function TasteProfile() {
   useEffect(() => {
     if (!usedFallback && candidateIndex >= candidates.length && candidates.length > 0) {
       setUsedFallback(true)
-      fetch(`${BASE_URL}/api/art-of-the-day/?fallback=true`, {
-        headers: { Authorization: `Token ${token}` },
-      })
+      authFetch(`${BASE_URL}/api/art-of-the-day/?fallback=true`)
         .then(res => res.ok ? res.json() : null)
         .then(data => {
           if (data?.candidates?.length) {

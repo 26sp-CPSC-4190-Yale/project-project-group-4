@@ -4,14 +4,12 @@ import { BASE_URL } from '../lib/constants'
 const NOTIF_POLL_INTERVAL = 30000
 
 export default function Layout({ activeTab, onNavigate, children }) {
-  const { user, logout, token } = useAuth()
+  const { user, logout, token, authFetch } = useAuth()
   const [notifCount, setNotifCount] = useState(0)
 
   useEffect(() => {
     async function fetchNotifications() {
-      const res = await fetch(`${BASE_URL}/api/notifications/`, {
-        headers: { Authorization: `Token ${token}` },
-      })
+      const res = await authFetch(`${BASE_URL}/api/notifications/`)
       if (res.ok) {
         const data = await res.json()
         setNotifCount(data.new_matches + data.pending_requests)

@@ -28,7 +28,7 @@ function MatchCard({ m, actions }) {
 }
 
 export default function Messages() {
-  const { token } = useAuth()
+  const { token, authFetch } = useAuth()
   const [matches, setMatches] = useState([])
   const [loading, setLoading] = useState(true)
   const [activeConversation, setActiveConversation] = useState(null)
@@ -36,9 +36,7 @@ export default function Messages() {
 
 
   async function fetchMatches() {
-    const res = await fetch(`${BASE_URL}/api/matches/`, {
-      headers: { Authorization: `Token ${token}` },
-    })
+    const res = await authFetch(`${BASE_URL}/api/matches/`)
     if (res.ok) setMatches(await res.json())
     setLoading(false)
   }
@@ -46,9 +44,9 @@ export default function Messages() {
   useEffect(() => { fetchMatches() }, [token])
 
   async function performAction(userId, action) {
-    const res = await fetch(`${BASE_URL}/api/matches/${userId}/action/`, {
+    const res = await authFetch(`${BASE_URL}/api/matches/${userId}/action/`, {
       method: 'POST',
-      headers: { Authorization: `Token ${token}`, 'Content-Type': 'application/json' },
+      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ action }),
     })
     if (res.ok) fetchMatches()

@@ -3,7 +3,7 @@ import { useAuth } from '../context/AuthContext'
 import { BASE_URL } from '../lib/constants'
 
 export default function Profile() {
-  const { token, user, login, changePassword } = useAuth()
+  const { token, user, login, changePassword, authFetch } = useAuth()
   const [stats, setStats] = useState(null)
   const [bio, setBio] = useState('')
   const [hasPhoto, setHasPhoto] = useState(false)
@@ -23,11 +23,10 @@ export default function Profile() {
 
   useEffect(() => {
     async function fetchProfile() {
-      const headers = { Authorization: `Token ${token}` }
       try {
         const [statsRes, profileRes] = await Promise.all([
-          fetch(`${BASE_URL}/api/profile/stats/`, { headers }),
-          fetch(`${BASE_URL}/api/profile/me/`, { headers }),
+          authFetch(`${BASE_URL}/api/profile/stats/`),
+          authFetch(`${BASE_URL}/api/profile/me/`),
         ])
         if (!statsRes.ok || !profileRes.ok) throw new Error()
         const [statsData, profileData] = await Promise.all([
@@ -56,9 +55,8 @@ export default function Profile() {
     try {
       const formData = new FormData()
       formData.append('bio', bio)
-      const res = await fetch(`${BASE_URL}/api/profile/me/`, {
+      const res = await authFetch(`${BASE_URL}/api/profile/me/`, {
         method: 'PATCH',
-        headers: { Authorization: `Token ${token}` },
         body: formData,
       })
       if (!res.ok) {
@@ -82,9 +80,8 @@ export default function Profile() {
     try {
       const formData = new FormData()
       formData.append('photo', file)
-      const res = await fetch(`${BASE_URL}/api/profile/me/`, {
+      const res = await authFetch(`${BASE_URL}/api/profile/me/`, {
         method: 'PATCH',
-        headers: { Authorization: `Token ${token}` },
         body: formData,
       })
       if (!res.ok) {

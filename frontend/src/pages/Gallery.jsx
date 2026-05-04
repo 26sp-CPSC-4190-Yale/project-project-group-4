@@ -4,7 +4,7 @@ import useSwipe from '../hooks/useSwipe'
 import { BASE_URL } from '../lib/constants'
 
 export default function Gallery() {
-  const { token } = useAuth()
+  const { token, authFetch } = useAuth()
   const [artworks, setArtworks] = useState([])
   const [currentIndex, setCurrentIndex] = useState(0)
   const [error, setError] = useState(null)
@@ -29,9 +29,7 @@ export default function Gallery() {
     if (isFetchingRef.current || noMoreRef.current) return
     isFetchingRef.current = true
     try {
-      const res = await fetch(`${BASE_URL}/api/artworks/?limit=20`, {
-        headers: { Authorization: `Token ${token}` },
-      })
+      const res = await authFetch(`${BASE_URL}/api/artworks/?limit=20`)
       if (!res.ok) throw new Error()
       const data = await res.json()
       if (data.results.length === 0) {
@@ -48,9 +46,9 @@ export default function Gallery() {
 
   async function recordInteraction(artworkId, action) {
     try {
-      await fetch(`${BASE_URL}/api/interactions/`, {
+      await authFetch(`${BASE_URL}/api/interactions/`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json', Authorization: `Token ${token}` },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ artwork_id: artworkId, action }),
       })
     } catch { /* fire and forget */ }
@@ -112,9 +110,8 @@ export default function Gallery() {
   async function handleUndo() {
     if (!lastSwiped) return
     try {
-      await fetch(`${BASE_URL}/api/interactions/${lastSwiped.artwork.id}/`, {
+      await authFetch(`${BASE_URL}/api/interactions/${lastSwiped.artwork.id}/`, {
         method: 'DELETE',
-        headers: { Authorization: `Token ${token}` },
       })
     } catch { /* best-effort */ }
     setCurrentIndex(i => i - 1)

@@ -4,7 +4,7 @@ import { BASE_URL } from '../lib/constants'
 const POLL_INTERVAL = 4000
 
 export default function Conversation({ otherUser, onBack, onUnmatch }) {
-  const { token, user } = useAuth()
+  const { token, user, authFetch } = useAuth()
   const [messages, setMessages] = useState([])
   const [text, setText] = useState('')
   const [sending, setSending] = useState(false)
@@ -13,9 +13,7 @@ export default function Conversation({ otherUser, onBack, onUnmatch }) {
 
   async function fetchMessages() {
     try {
-      const res = await fetch(`${BASE_URL}/api/messages/${otherUser.id}/`, {
-        headers: { Authorization: `Token ${token}` },
-      })
+      const res = await authFetch(`${BASE_URL}/api/messages/${otherUser.id}/`)
       if (res.status === 403) {
         setUnmatched(true)
         return
@@ -44,12 +42,9 @@ export default function Conversation({ otherUser, onBack, onUnmatch }) {
     if (!trimmed) return
     setSending(true)
     try {
-      const res = await fetch(`${BASE_URL}/api/messages/${otherUser.id}/`, {
+      const res = await authFetch(`${BASE_URL}/api/messages/${otherUser.id}/`, {
         method: 'POST',
-        headers: {
-          Authorization: `Token ${token}`,
-          'Content-Type': 'application/json',
-        },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ text: trimmed }),
       })
       if (res.ok) {
@@ -63,9 +58,8 @@ export default function Conversation({ otherUser, onBack, onUnmatch }) {
 
   async function handleUnmatch() {
     if (!confirm(`Unmatch with ${otherUser.username}? This will delete all messages.`)) return
-    const res = await fetch(`${BASE_URL}/api/matches/${otherUser.id}/`, {
+    const res = await authFetch(`${BASE_URL}/api/matches/${otherUser.id}/`, {
       method: 'DELETE',
-      headers: { Authorization: `Token ${token}` },
     })
     if (res.ok) onUnmatch()
   }

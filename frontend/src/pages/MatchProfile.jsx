@@ -3,22 +3,21 @@ import { useAuth } from '../context/AuthContext'
 import { BASE_URL, FALLBACK_IMAGE } from '../lib/constants'
 
 export default function MatchProfile({ match, onBack, onMessage }) {
-  const { token } = useAuth()
+  const { token, authFetch } = useAuth()
   const [facets, setFacets] = useState(null)
   const [commonArt, setCommonArt] = useState([])
   const [commonTotal, setCommonTotal] = useState(0)
 
   useEffect(() => {
-    const headers = { Authorization: `Token ${token}` }
     async function fetchFacets() {
       try {
-        const res = await fetch(`${BASE_URL}/api/matches/${match.user.id}/facets/`, { headers })
+        const res = await authFetch(`${BASE_URL}/api/matches/${match.user.id}/facets/`)
         if (res.ok) setFacets(await res.json())
       } catch { /* fall back to match.top_facets */ }
     }
     async function fetchCommonLikes() {
       try {
-        const res = await fetch(`${BASE_URL}/api/matches/${match.user.id}/common-likes/`, { headers })
+        const res = await authFetch(`${BASE_URL}/api/matches/${match.user.id}/common-likes/`)
         if (res.ok) {
           const data = await res.json()
           setCommonArt(data.results)
