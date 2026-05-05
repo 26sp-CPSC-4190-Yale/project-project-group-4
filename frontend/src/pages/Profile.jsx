@@ -22,6 +22,15 @@ export default function Profile() {
   const [pwError, setPwError] = useState(null);
   const [pwSuccess, setPwSuccess] = useState(null);
 
+  // Img tags can't send the Authorization header, so the photo endpoint
+  // (token-auth-only) is fetched as a blob and rendered via object URL.
+  async function loadPhotoBlob() {
+    const res = await authFetch(`${BASE_URL}/api/profile/photo/${user.id}/`);
+    if (!res.ok) return null;
+    const blob = await res.blob();
+    return URL.createObjectURL(blob);
+  }
+
   useEffect(() => {
     async function fetchProfile() {
       try {
@@ -37,7 +46,8 @@ export default function Profile() {
         setStats(statsData);
         setBio(profileData.bio || '');
         if (profileData.has_photo) {
-          setPhotoUrl(`${BASE_URL}/api/profile/photo/${user.id}/?t=${Date.now()}`);
+          const url = await loadPhotoBlob();
+          if (url) setPhotoUrl(url);
         }
       } catch {
         setError('Failed to load profile data.');
@@ -47,6 +57,12 @@ export default function Profile() {
     }
     fetchProfile();
   }, [token, user.id]);
+
+  useEffect(() => {
+    return () => {
+      if (photoUrl) URL.revokeObjectURL(photoUrl);
+    };
+  }, [photoUrl]);
 
   async function handleSave() {
     setSaving(true);
@@ -88,7 +104,8 @@ export default function Profile() {
         const data = await res.json();
         throw new Error(data.error || 'Upload failed');
       }
-      setPhotoUrl(`${BASE_URL}/api/profile/photo/${user.id}/?t=${Date.now()}`);
+      const url = await loadPhotoBlob();
+      if (url) setPhotoUrl(url);
     } catch (e) {
       setError(e.message);
     } finally {
@@ -126,7 +143,6 @@ export default function Profile() {
               className="profile-avatar-img"
               src={photoUrl}
               alt="Profile"
-              onError={() => setPhotoUrl(null)}
             />
           ) : (
             <div className="profile-avatar">{initial}</div>

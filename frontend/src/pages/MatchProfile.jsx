@@ -10,7 +10,7 @@ export default function MatchProfile({ match, onBack, onMessage }) {
   const [commonArt, setCommonArt] = useState([]);
   const [commonTotal, setCommonTotal] = useState(0);
   const [profile, setProfile] = useState(null);
-  const [photoFailed, setPhotoFailed] = useState(false);
+  const [photoUrl, setPhotoUrl] = useState(null);
 
   useEffect(() => {
     async function fetchFacets() {
@@ -40,6 +40,26 @@ export default function MatchProfile({ match, onBack, onMessage }) {
     fetchProfile();
   }, [match.user.id, token]);
 
+  // Img tags can't send the Authorization header, so fetch the photo as a
+  // blob and render via object URL.
+  useEffect(() => {
+    if (!profile?.has_photo) return;
+    let url = null;
+    let cancelled = false;
+    authFetch(`${BASE_URL}/api/profile/photo/${match.user.id}/`)
+      .then(res => (res.ok ? res.blob() : null))
+      .then(blob => {
+        if (!blob || cancelled) return;
+        url = URL.createObjectURL(blob);
+        setPhotoUrl(url);
+      })
+      .catch(() => {});
+    return () => {
+      cancelled = true;
+      if (url) URL.revokeObjectURL(url);
+    };
+  }, [profile?.has_photo, match.user.id]);
+
   const allFacets = facets ?? match.top_facets ?? [];
 
   const grouped = useMemo(() => {
@@ -62,12 +82,11 @@ export default function MatchProfile({ match, onBack, onMessage }) {
       <button className="conversation-back" onClick={onBack}>←</button>
 
       <section className="profile-account">
-        {profile?.has_photo && !photoFailed ? (
+        {photoUrl ? (
           <img
             className="profile-avatar-img"
-            src={`${BASE_URL}/api/profile/photo/${match.user.id}/`}
+            src={photoUrl}
             alt={`${match.user.username} profile`}
-            onError={() => setPhotoFailed(true)}
             decoding="async"
           />
         ) : (
