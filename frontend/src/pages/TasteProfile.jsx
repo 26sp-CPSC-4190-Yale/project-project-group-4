@@ -159,6 +159,7 @@ export default function TasteProfile() {
               onError={handleImageError}
               style={{ opacity: imageReady ? 1 : 0, transition: 'opacity 0.4s ease' }}
               draggable={false}
+              decoding="async"
             />
           </div>
 
@@ -279,6 +280,8 @@ export default function TasteProfile() {
                           src={`https://media.collections.yale.edu/thumbnail/yuag/obj/${artwork.id}`}
                           alt={artwork.label}
                           onError={e => { e.target.src = FALLBACK_IMAGE; }}
+                          loading="lazy"
+                          decoding="async"
                         />
                         <div className="likes-card-body">
                           <p className="likes-card-title">{artwork.label}</p>

@@ -68,6 +68,7 @@ export default function MatchProfile({ match, onBack, onMessage }) {
             src={`${BASE_URL}/api/profile/photo/${match.user.id}/`}
             alt={`${match.user.username} profile`}
             onError={() => setPhotoFailed(true)}
+            decoding="async"
           />
         ) : (
           <div className="profile-avatar">{match.user.username[0].toUpperCase()}</div>
@@ -132,6 +133,8 @@ export default function MatchProfile({ match, onBack, onMessage }) {
                   src={`https://media.collections.yale.edu/thumbnail/yuag/obj/${artwork.id}`}
                   alt={artwork.label}
                   onError={e => { e.target.src = FALLBACK_IMAGE; }}
+                  loading="lazy"
+                  decoding="async"
                 />
               </div>
             ))}
