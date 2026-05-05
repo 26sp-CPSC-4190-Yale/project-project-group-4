@@ -2,36 +2,22 @@
 
 # YArt Match
 
-A full-stack web app for discovering art from the Yale University Art Gallery — and meeting people who share your taste.
+A web app for browsing art from the Yale University Art Gallery and connecting with people who have similar taste.
 
-Swipe right on art you like, left on art you don't. The app builds a taste profile from each artwork's classifiers, departments, artist nationalities, and centuries. When two users' profiles are similar enough, they're matched and can message each other.
-
----
-
-## Table of Contents
-
-- [Features](#features)
-- [Tech Stack](#tech-stack)
-- [Project Structure](#project-structure)
-- [Getting Started](#getting-started)
-- [Environment Variables](#environment-variables)
-- [API Reference](#api-reference)
-- [How the Matching Algorithm Works](#how-the-matching-algorithm-works)
-- [Data Source](#data-source)
-- [Contributing](#contributing)
+You swipe through artworks — right to like, left to pass. As you go, the app builds a taste profile from things like the artwork's style, department, artist nationality, and time period. When two users have similar enough profiles, they get matched and can message each other.
 
 ---
 
 ## Features
 
-- **Swipe to explore** — browse Yale University Art Gallery artworks one at a time; swipe or use arrow keys / A–D to like or pass, with an undo for the last swipe
-- **Flip cards** — tap a card to see the artwork's full metadata (artist, date, medium, department)
-- **Taste profile** — top taste signals broken down by classifier, department, nationality, and century, plus a paginated view of everything you've liked
-- **Art of the Day** — a personalized daily recommendation based on your accumulated taste signals
-- **Taste-based matching** — cosine similarity over Bayesian-scored taste vectors; only users with enough swipe history are considered
-- **Match requests & messaging** — send match requests, accept or decline incoming ones, and chat once matched
-- **Notification badge** — polls every 30 seconds for new matches and pending requests
-- **User profiles** — bio, profile photo (JPEG/PNG/WebP, max 2 MB), and stats (likes, passes, like rate, join date)
+- **Swipe to explore** — browse YUAG artworks one at a time; drag, use arrow keys, or A/D to like or pass. There's also an undo button if you change your mind
+- **Flip cards** — tap a card to flip it and see the full metadata (artist, date, medium, department, etc.)
+- **Taste profile** — see your top taste signals broken down by style, department, nationality, and century, plus a grid of everything you've liked
+- **Art of the Day** — a daily personalized recommendation based on your taste history (falls back to popular artworks if you're new)
+- **Taste-based matching** — cosine similarity over Bayesian-scored taste vectors; users need at least 20 swipes before they enter the matching pool
+- **Match requests & messaging** — the app surfaces potential matches; you send a request, they accept or decline, and then you can chat
+- **Notifications** — a badge that polls every 30 seconds for new matches and pending requests
+- **User profiles** — bio, profile photo, and stats (likes, passes, like rate, join date); only visible to matched users
 
 ---
 
@@ -40,9 +26,9 @@ Swipe right on art you like, left on art you don't. The app builds a taste profi
 | Layer | Technology |
 |---|---|
 | Frontend | React 19, Vite 7 |
-| Backend | Django 6, Django REST Framework 3 |
+| Backend | Django 6, Django REST Framework |
 | Database | PostgreSQL (app data) + read-only Yale LUX SQLite (artwork data) |
-| Auth | DRF Token Authentication (24-hour expiry) |
+| Auth | Token-based (24-hour expiry, custom DRF class) |
 | Package management | npm (frontend), uv / pyproject.toml (backend) |
 
 ---
@@ -69,7 +55,7 @@ project-project-group-4/
 │   ├── views.py
 │   ├── serializers.py
 │   ├── urls.py
-│   └── tests.py            # Full test suite (75 tests)
+│   └── tests.py            # Test suite
 ├── backend/                # Django project config
 │   ├── settings.py
 │   └── urls.py
@@ -92,37 +78,37 @@ project-project-group-4/
 ### Backend
 
 ```bash
-# Create and activate a virtual environment
+# create and activate a virtual environment
 python -m venv venv
 source venv/bin/activate       # Windows: venv\Scripts\activate
 
-# Install dependencies (pick one)
-pip install -r requirements.txt    # pinned versions
-pip install -e .                   # or via pyproject.toml with uv/pip
+# install dependencies
+pip install -r requirements.txt    # pinned
+pip install -e .                   # or via pyproject.toml with uv
 
-# Set up environment variables
-cp .env.example .env               # then edit .env with your values
+# copy and fill in your env vars
+cp .env.example .env
 
-# Apply migrations
+# run migrations
 python manage.py migrate
 
-# Start the development server
+# start the dev server
 python manage.py runserver
 ```
 
-The API will be available at `http://127.0.0.1:8000`.
+The API will be at `http://127.0.0.1:8000`.
 
-### Running the test suite
+### Running the tests
 
 ```bash
-# First run — creates the test database
+# first run (creates the test DB)
 python manage.py test gallery --verbosity=2
 
-# Subsequent runs — reuse the existing test DB (faster)
+# subsequent runs (reuse test DB, faster)
 python manage.py test gallery --verbosity=2 --keepdb
 ```
 
-75 tests cover: auth (register, login, logout, token expiry, password change), interactions, taste signals, artwork endpoints, matches, messaging, notifications, and profile.
+Tests cover auth, interactions, taste signals, matches, messaging, notifications, and profiles.
 
 ### Frontend
 
@@ -214,29 +200,24 @@ Auth tokens expire after **24 hours**. A `401` response with `code: "token_expir
 
 ## How the Matching Algorithm Works
 
-Every swipe updates the user's **taste signals** — one per (facet, value) pair extracted from the artwork:
+Every swipe updates your **taste signals**. Each artwork has a set of (facet, value) pairs — things like classifier, department, artist nationality, and century — and liking or passing on the artwork nudges the score for each of those pairs up or down.
 
-- **Classifier** — e.g. Painting, Sculpture, Photograph
-- **Department** — e.g. Prints and Drawings, Asian Art
-- **Nationality** — the artist's nationality
-- **Century** — derived from the artwork's date string
-
-Each signal tracks a like count and a pass count. The score is computed with **Bayesian smoothing** to avoid extreme values when there's limited evidence:
+Scores use Bayesian smoothing so a single swipe doesn't immediately dominate:
 
 ```
 score = (likes + α) / (likes + passes + 2α)    where α = 2
 ```
 
-Scores range from 0 to 1, anchored near 0.5 until enough swipes accumulate.
+This keeps scores near 0.5 early on and only pulls them toward 0 or 1 as more evidence accumulates.
 
-**Match detection** runs in a background thread every 15 swipes:
+**Match detection** runs in a background thread every 15 swipes (so it doesn't slow down the swipe API):
 
-1. Skip users with fewer than 20 total swipes (cold-start guard).
-2. Build a taste vector for the current user over every (facet, value) pair they've encountered.
-3. Compute **cosine similarity** against every other eligible user's vector.
-4. Create a `Match` record (status: `pending`) for any pair whose similarity exceeds 0.30.
+1. Skip anyone with fewer than 20 total swipes — not enough signal yet.
+2. Build a taste vector for the current user.
+3. Compute cosine similarity against every other eligible user.
+4. Create a `Match` (status: `pending`) for any pair above 0.30 similarity.
 
-**Art of the Day** selects from unseen artworks that score highest against the user's taste signals, with a deterministic daily tiebreaker (MD5 of artwork ID + today's date) so the recommendation stays stable for 24 hours.
+**Art of the Day** works in two phases: first pull candidate artworks that match your top taste signals, then score and rank those candidates. A daily tiebreaker (MD5 of artwork ID + date) keeps the pick stable for 24 hours.
 
 ---
 
@@ -250,11 +231,3 @@ https://media.collections.yale.edu/thumbnail/yuag/obj/{artwork_id}
 
 The LUX models (`Artwork`, `Agent`, `Classifier`, etc.) are read-only unmanaged Django models — this app never writes to them.
 
----
-
-## Contributing
-
-1. Fork the repo and create a feature branch off `main`.
-2. Run `npm run lint` before opening a frontend PR.
-3. Keep API changes consistent with the existing DRF serializer/view patterns.
-4. Open a pull request with a clear description of what changed and why.
