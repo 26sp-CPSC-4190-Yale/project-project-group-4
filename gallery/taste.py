@@ -252,9 +252,8 @@ def get_daily_artwork(user):
     Cold-start users (< COLD_START_THRESHOLD interactions) get the
     globally most-liked artworks instead.
 
-    Uses a two-phase approach for performance on free-tier databases:
-    1. Candidate generation: find artworks matching the user's TOP signal (bounded)
-    2. Candidate scoring: score those candidates against all signals
+    Phase 1: Candidate generation: find artworks matching the user's TOP signal (bounded)
+    Phase 2: Candidate scoring: score those candidates against all signals
     """
     total_interactions = Interaction.objects.filter(user=user).count()
 
