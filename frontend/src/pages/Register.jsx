@@ -1,6 +1,6 @@
 'use strict';
 
-import { useState } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useAuth } from '../context/AuthContext';
 
 export default function Register({ onSwitch }) {
@@ -10,6 +10,13 @@ export default function Register({ onSwitch }) {
   const [password, setPassword] = useState('');
   const [error, setError] = useState(null);
   const [loading, setLoading] = useState(false);
+  const usernameRef = useRef(null);
+
+  useEffect(() => {
+    if (window.matchMedia('(hover: hover)').matches) {
+      usernameRef.current?.focus();
+    }
+  }, []);
 
   async function handleSubmit(e) {
     e.preventDefault();
@@ -36,6 +43,7 @@ export default function Register({ onSwitch }) {
           <h2>Create account</h2>
           <form onSubmit={handleSubmit} className="auth-form">
             <input
+              ref={usernameRef}
               className="auth-input"
               type="text"
               placeholder="Username"

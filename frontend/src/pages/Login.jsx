@@ -1,6 +1,6 @@
 'use strict';
 
-import { useState } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useAuth } from '../context/AuthContext';
 
 export default function Login({ onSwitch }) {
@@ -9,6 +9,13 @@ export default function Login({ onSwitch }) {
   const [password, setPassword] = useState('');
   const [error, setError] = useState(null);
   const [loading, setLoading] = useState(false);
+  const usernameRef = useRef(null);
+
+  useEffect(() => {
+    if (window.matchMedia('(hover: hover)').matches) {
+      usernameRef.current?.focus();
+    }
+  }, []);
 
   async function handleSubmit(e) {
     e.preventDefault();
@@ -35,6 +42,7 @@ export default function Login({ onSwitch }) {
           <h2>Log in</h2>
           <form onSubmit={handleSubmit} className="auth-form">
             <input
+              ref={usernameRef}
               className="auth-input"
               type="text"
               placeholder="Username"
