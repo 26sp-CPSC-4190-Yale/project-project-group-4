@@ -275,7 +275,6 @@ def get_daily_artwork(user):
     seen_subquery = Interaction.objects.filter(user=user).values("artwork_id")
 
     # Phase 1: Generate a bounded candidate set using the top signal per facet.
-    # Each query is a single join with a LIMIT — fast on any database.
     candidate_ids = set()
     MAX_PER_FACET = 500
 
@@ -311,7 +310,6 @@ def get_daily_artwork(user):
         return _daily_cold_start(user), []
 
     # Phase 2: Score candidates against all signals.
-    # Queries are fast because artwork_id__in is a small bounded set.
     scores = defaultdict(float)
 
     if cls_vals:

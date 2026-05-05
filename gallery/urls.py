@@ -8,9 +8,6 @@ urlpatterns = [
     path('api/auth/logout/', views.logout, name='logout'),
     path('api/auth/change-password/', views.change_password, name='change_password'),
 
-    # Fetch specific artwork by ID with interaction data
-    path('api/artwork/<int:artwork_id>/', views.artwork_detail, name='artwork_detail'),
-
     # Fetch all artworks (with pagination support)
     path('api/artworks/', views.artwork_list, name='artwork_list'),
 

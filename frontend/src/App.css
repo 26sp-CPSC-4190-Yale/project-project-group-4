@@ -2,7 +2,7 @@
    YArt Match — App Styles
    =================================== */
 
-/* ── Top Nav ── */
+/* Top Nav */
 
 .top-nav {
   display: flex;
@@ -67,7 +67,7 @@
   color: var(--text-primary);
 }
 
-/* ── Bottom Tab Bar ── */
+/* Bottom Tab Bar */
 
 .tab-bar {
   display: flex;
@@ -102,7 +102,7 @@
   line-height: 1;
 }
 
-/* ── Gallery View ── */
+/* Gallery View */
 
 .gallery {
   flex: 1;
@@ -115,7 +115,7 @@
   position: relative;
 }
 
-/* ── Card ── */
+/* Card */
 
 .card-container {
   perspective: 900px;
@@ -245,7 +245,7 @@
   color: var(--text-muted);
 }
 
-/* ── Swipe Labels ── */
+/* Swipe Labels */
 
 .swipe-label {
   position: absolute;
@@ -273,7 +273,7 @@
   transform: rotate(12deg);
 }
 
-/* ── Action Buttons (circular, Tinder-style) ── */
+/* Action Buttons (circular, Tinder-style) */
 
 .action-buttons {
   display: flex;
@@ -331,7 +331,7 @@
   transform: none;
 }
 
-/* ── Counter ── */
+/* Counter */
 
 .gallery-counter {
   font-size: 0.82em;
@@ -339,7 +339,7 @@
   margin: 14px 0 0;
 }
 
-/* ── Auth ── */
+/* Auth */
 
 .auth-page {
   flex: 1;
@@ -457,7 +457,7 @@
   font-family: inherit;
 }
 
-/* ── Page Content (scroll host) ── */
+/* Page Content (scroll host) */
 
 .page-content {
   flex: 1;
@@ -468,7 +468,7 @@
   min-height: 0;
 }
 
-/* ── My Likes Page ── */
+/* My Likes Page */
 
 .likes-page {
   flex: 1;
@@ -600,7 +600,7 @@
   background: rgba(200, 169, 110, 0.1);
 }
 
-/* ── Messages Page ── */
+/* Messages Page */
 
 .messages-page {
   flex: 1;
@@ -675,7 +675,7 @@
   font-size: 1.4em;
 }
 
-/* ── Conversation ── */
+/* Conversation */
 
 .conversation {
   flex: 1;
@@ -892,7 +892,7 @@
   border-color: #e05050;
 }
 
-/* ── Match sections ── */
+/* Match sections */
 
 .match-section {
   margin-bottom: 24px;
@@ -1007,7 +1007,7 @@
   font-style: italic;
 }
 
-/* ── Notification badge ── */
+/* Notification badge */
 
 .tab-bar-icon-notif {
   position: relative;
@@ -1034,7 +1034,7 @@
   line-height: 1;
 }
 
-/* ── Status Messages ── */
+/* Status Messages */
 
 .status-message {
   text-align: center;
@@ -1048,7 +1048,7 @@
   font-size: 0.95em;
 }
 
-/* ── Taste Profile Page ── */
+/* Taste Profile Page */
 
 .taste-section {
   margin: 0 auto 24px;
@@ -1094,7 +1094,7 @@
   opacity: 0.5;
 }
 
-/* ── Art of the Day ── */
+/* Art of the Day */
 
 .aotd-card {
   max-width: 900px;
@@ -1246,7 +1246,7 @@
   width: 40%;
 }
 
-/* ── Profile Page ── */
+/* Profile Page */
 
 .profile-page {
   flex: 1;
@@ -1427,7 +1427,7 @@
   display: block;
 }
 
-/* ── Eras ── */
+/* Eras */
 
 .profile-eras {
   margin-bottom: 24px;
@@ -1565,7 +1565,7 @@
   margin-top: 12px;
 }
 
-/* ── Skeletons ── */
+/* Skeletons */
 
 .profile-skeleton {
   background: linear-gradient(
@@ -1609,7 +1609,7 @@
   font-size: 0.95em;
 }
 
-/* ── Error Boundary ── */
+/* Error Boundary */
 .error-boundary {
   display: flex;
   flex-direction: column;

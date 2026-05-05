@@ -1,6 +1,6 @@
 from rest_framework import serializers
 from django.contrib.auth.models import User
-from .models import Artwork, Interaction, Message
+from .models import Artwork, Message
 
 
 class UserSerializer(serializers.ModelSerializer):
@@ -27,17 +27,3 @@ class MessageSerializer(serializers.ModelSerializer):
         fields = ['id', 'sender', 'sender_username', 'recipient', 'text', 'timestamp']
         read_only_fields = ['sender', 'timestamp']
 
-class ArtworkDetailSerializer(serializers.ModelSerializer):
-    """Detailed artwork serializer with interaction statistics."""
-    total_likes = serializers.SerializerMethodField()
-    total_passes = serializers.SerializerMethodField()
-    
-    class Meta:
-        model = Artwork
-        fields = ['id', 'label', 'accession_no', 'date', 'total_likes', 'total_passes']
-    
-    def get_total_likes(self, obj):
-        return Interaction.objects.filter(artwork=obj, action='like').count()
-    
-    def get_total_passes(self, obj):
-        return Interaction.objects.filter(artwork=obj, action='pass').count()

@@ -60,10 +60,7 @@ export default function Gallery() {
     if (artworks.length > 0 && currentIndex >= artworks.length - 5) fetchMore()
   }, [currentIndex, artworks.length])
 
-  // Track load state for the current artwork. Using a separate Image() instance
-  // is more reliable than the JSX img's onLoad: when the displayed <img>'s src
-  // swaps to a URL that's already cached, the load event may not re-fire on the
-  // existing element, leaving imageReady stuck at false.
+  // Track load state for the current artwork.
   useEffect(() => {
     const artwork = artworks[currentIndex]
     if (!artwork) return

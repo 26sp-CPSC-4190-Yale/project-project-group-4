@@ -92,9 +92,6 @@ export default function useSwipe(onSwipe) {
       onPointerStart(e.touches[0].clientX)
     },
     onTouchMove: e => onPointerMove(e.touches[0].clientX),
-    // Browsers dispatch synthetic mousedown/mouseup after touchend. Without the
-    // settle window below, those mouse handlers re-run onPointerEnd and toggle
-    // the flip state a second time, cancelling the touch flip.
     onTouchEnd: () => {
       onPointerEnd()
       touchSettleTimerRef.current = setTimeout(() => {

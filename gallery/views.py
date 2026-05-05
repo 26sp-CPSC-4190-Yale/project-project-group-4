@@ -1,4 +1,3 @@
-import random
 import threading
 
 from django.contrib.auth import authenticate
@@ -12,11 +11,13 @@ from rest_framework import status
 from rest_framework.authtoken.models import Token
 from django.http import HttpResponse
 from .models import Artwork, Interaction, Match, Message, Production, Reference, TasteSignal, UserProfile
-from .serializers import ArtworkSerializer, ArtworkDetailSerializer, UserSerializer, MessageSerializer
+from .serializers import ArtworkSerializer, UserSerializer, MessageSerializer
 from .taste import update_taste_signals, check_matches, get_daily_artwork, MATCH_CHECK_INTERVAL
 
 MAX_PAGE_LIMIT = 100
 MAX_MESSAGE_LENGTH = 5000
+MAX_PHOTO_SIZE = 2 * 1024 * 1024  # 2 MB
+ALLOWED_PHOTO_TYPES = {'image/jpeg', 'image/png', 'image/webp'}
 
 
 def _check_matches_background(user):
@@ -28,6 +29,7 @@ def _check_matches_background(user):
 
 
 def _clamp(value, lo, hi):
+    """Clamp the value between two extremes of the allowed interval."""
     try:
         return max(lo, min(int(value), hi))
     except (TypeError, ValueError):
@@ -56,8 +58,7 @@ def login(request):
     user = authenticate(username=username, password=password)
     if user is None:
         return Response({'error': 'Invalid credentials'}, status=status.HTTP_401_UNAUTHORIZED)
-    # Rotate the token on every login so the TTL window resets — without this,
-    # a re-login could return a near-expired token from a prior session.
+    # Rotate the token on every login so the expiry window resets
     Token.objects.filter(user=user).delete()
     token = Token.objects.create(user=user)
     return Response({'token': token.key, 'user': {'id': user.id, 'username': user.username, 'email': user.email}})
@@ -186,22 +187,6 @@ def delete_interaction(request, artwork_id):
 
 
 @api_view(['GET'])
-def artwork_detail(request, artwork_id):
-    """
-    Get a specific artwork by ID along with user interactions.
-    """
-    try:
-        artwork = Artwork.objects.get(id=artwork_id)
-    except Artwork.DoesNotExist:
-        return Response(
-            {'error': f'Artwork with id {artwork_id} not found'},
-            status=status.HTTP_404_NOT_FOUND
-        )
-    
-    serializer = ArtworkDetailSerializer(artwork)
-    return Response(serializer.data)
-
-@api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def profile_stats(request):
     """Return the current user's interaction stats for the profile page."""
@@ -232,10 +217,6 @@ def profile_stats(request):
     }
     cache.set(cache_key, data, timeout=30)
     return Response(data)
-
-
-MAX_PHOTO_SIZE = 2 * 1024 * 1024  # 2 MB
-ALLOWED_PHOTO_TYPES = {'image/jpeg', 'image/png', 'image/webp'}
 
 
 @api_view(['GET', 'PATCH'])
@@ -325,12 +306,14 @@ def liked_artworks(request):
 
 
 def _get_match(user, other_id):
+    """Find the match between two users."""
     return Match.objects.filter(
         Q(user1_id=user.id, user2_id=other_id) | Q(user1_id=other_id, user2_id=user.id)
     ).first()
 
 
 def _top_facets(user_id, other_id, limit=3):
+    """Fetch the top shared facets between two users."""
     my_sigs = {(s.facet, s.value): s.score for s in TasteSignal.objects.filter(user_id=user_id)}
     their_sigs = {(s.facet, s.value): s.score for s in TasteSignal.objects.filter(user_id=other_id)}
     shared = []

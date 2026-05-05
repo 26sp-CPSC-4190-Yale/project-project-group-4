@@ -1,3 +1,4 @@
+// Formats century value to be readable
 export function formatCentury(value) {
   const n = parseInt(value, 10)
   if (Number.isNaN(n)) return value
@@ -8,6 +9,7 @@ export function formatCentury(value) {
   return `${abs}${suffix} century${n < 0 ? ' BC' : ''}`
 }
 
+// To have the option to format other facets when needed
 export function formatFacetValue(facet, value) {
   return facet === 'century' ? formatCentury(value) : value
 }
