@@ -83,12 +83,14 @@ export default function MatchProfile({ match, onBack, onMessage }) {
 
       <section className="profile-account">
         {photoUrl ? (
-          <img
-            className="profile-avatar-img"
-            src={photoUrl}
-            alt={`${match.user.username} profile`}
-            decoding="async"
-          />
+          <div className="profile-avatar-frame">
+            <img
+              className="profile-avatar-img"
+              src={photoUrl}
+              alt={`${match.user.username} profile`}
+              decoding="async"
+            />
+          </div>
         ) : (
           <div className="profile-avatar">{match.user.username[0].toUpperCase()}</div>
         )}
