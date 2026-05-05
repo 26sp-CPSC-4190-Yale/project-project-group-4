@@ -161,11 +161,26 @@ Most of this app is original work, but there's a fair amount of code, infrastruc
 
 ### Frontend (JavaScript)
 
-- **[React](https://react.dev/) 19** and **[react-dom](https://react.dev/) 19** — the only runtime UI dependency. Everything in the UI — the gallery card, swipe physics, taste profile, conversation view — is plain React with hooks. We did not pull in any UI component libraries, animation libraries, routing libraries, or HTTP clients; the app uses the browser's built-in `fetch`, plain CSS in `App.css`, and a tiny custom routing scheme based on view state in `App.jsx`. The standard reason: React was the framework the course required.
-- **[Vite](https://vitejs.dev/) 7** with **[@vitejs/plugin-react](https://www.npmjs.com/package/@vitejs/plugin-react)** — dev server and bundler. Vite gave us fast HMR during development and a small, reasonable production build with no manual webpack config.
-- **[esbuild](https://esbuild.github.io/) 0.28** — ships transitively with Vite and is used as the JS transformer.
-- **[ESLint](https://eslint.org/) 9** with `@eslint/js`, `eslint-plugin-react-hooks`, `eslint-plugin-react-refresh`, and `globals` — linting rules for the React code. Standard tooling for a React/Vite project.
-- **`@types/react` and `@types/react-dom`** — TypeScript types pulled in for editor support, even though the project itself is plain JavaScript.
+The complete list of npm packages is in `frontend/package.json`. Nothing else is pulled in at runtime — there are no UI component libraries, animation libraries, routing libraries, or HTTP clients. The app uses the browser's built-in `fetch`, plain CSS in `App.css`, and a tiny custom routing scheme based on view state in `App.jsx`.
+
+**Runtime dependencies**
+
+- **[react](https://react.dev/) ^19.2.0** — the UI library. Everything in the UI (gallery card, swipe physics, taste profile, conversation view) is plain React with hooks.
+- **[react-dom](https://react.dev/) ^19.2.0** — React's DOM renderer; mounts the app into `index.html`.
+
+**Dev dependencies**
+
+- **[vite](https://vitejs.dev/) ^7.3.1** — dev server and production bundler. Gave us fast HMR during development and a small, reasonable production build with no manual webpack config.
+- **[@vitejs/plugin-react](https://www.npmjs.com/package/@vitejs/plugin-react) ^5.1.1** — official Vite plugin that wires up React Fast Refresh and JSX transform.
+- **[eslint](https://eslint.org/) ^9.39.1** — linter for the React code.
+- **[@eslint/js](https://www.npmjs.com/package/@eslint/js) ^9.39.1** — ESLint's recommended JavaScript rule set, used as the base config in `eslint.config.js`.
+- **[eslint-plugin-react-hooks](https://www.npmjs.com/package/eslint-plugin-react-hooks) ^7.0.1** — enforces the rules of hooks.
+- **[eslint-plugin-react-refresh](https://www.npmjs.com/package/eslint-plugin-react-refresh) ^0.4.24** — keeps components compatible with Vite's Fast Refresh.
+- **[globals](https://www.npmjs.com/package/globals) ^16.5.0** — provides the standard set of global variable names (browser, node, etc.) for ESLint configs.
+- **[@types/react](https://www.npmjs.com/package/@types/react) ^19.2.7** — TypeScript types for React; pulled in for editor IntelliSense even though the project itself is plain JavaScript.
+- **[@types/react-dom](https://www.npmjs.com/package/@types/react-dom) ^19.2.3** — TypeScript types for `react-dom`, same reasoning.
+
+esbuild and rollup ship transitively under Vite as the JS transformer and bundler respectively; they are not declared in `package.json` directly.
 
 ### Data and external services
 
