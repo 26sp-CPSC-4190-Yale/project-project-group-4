@@ -792,6 +792,10 @@
   border-bottom-left-radius: 4px;
 }
 
+.message-bubble-pending {
+  opacity: 0.55;
+}
+
 .message-time {
   font-size: 0.72em;
   color: var(--text-muted);
