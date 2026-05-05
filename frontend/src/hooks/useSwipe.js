@@ -12,7 +12,11 @@ export default function useSwipe(onSwipe) {
   const [flipped, setFlipped] = useState(false)
 
   const startXRef = useRef(null)
+  const startTimeRef = useRef(0)
   const hasDraggedRef = useRef(false)
+
+  const DRAG_DETECT_PX = 10
+  const TAP_MAX_MS = 250
 
   function handleSwipe(direction) {
     if (exiting) return
@@ -28,6 +32,7 @@ export default function useSwipe(onSwipe) {
   function onPointerStart(clientX) {
     if (exiting) return
     startXRef.current = clientX
+    startTimeRef.current = Date.now()
     hasDraggedRef.current = false
     setDragging(true)
   }
@@ -35,15 +40,19 @@ export default function useSwipe(onSwipe) {
   function onPointerMove(clientX) {
     if (startXRef.current === null || exiting) return
     const dx = clientX - startXRef.current
-    if (Math.abs(dx) > 5) hasDraggedRef.current = true
+    if (Math.abs(dx) > DRAG_DETECT_PX) hasDraggedRef.current = true
     setDragX(dx)
   }
 
   function onPointerEnd() {
     if (startXRef.current === null || exiting) return
-    if (!hasDraggedRef.current) {
+    const elapsed = Date.now() - startTimeRef.current
+    const distance = Math.abs(dragX)
+    const isQuickTap = elapsed < TAP_MAX_MS && distance < SWIPE_THRESHOLD
+    if (!hasDraggedRef.current || isQuickTap) {
       setFlipped(f => !f)
-    } else if (Math.abs(dragX) >= SWIPE_THRESHOLD) {
+      setDragX(0)
+    } else if (distance >= SWIPE_THRESHOLD) {
       handleSwipe(dragX > 0 ? 'right' : 'left')
     } else {
       setDragX(0)

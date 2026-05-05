@@ -3,6 +3,21 @@ import { useAuth } from '../context/AuthContext'
 import { BASE_URL } from '../lib/constants'
 const POLL_INTERVAL = 4000
 
+function formatDateSeparator(date) {
+  const today = new Date()
+  const yesterday = new Date()
+  yesterday.setDate(today.getDate() - 1)
+  const sameDay = (a, b) => a.toDateString() === b.toDateString()
+  if (sameDay(date, today)) return 'Today'
+  if (sameDay(date, yesterday)) return 'Yesterday'
+  const daysAgo = (today - date) / (1000 * 60 * 60 * 24)
+  if (daysAgo < 7) return date.toLocaleDateString([], { weekday: 'long' })
+  const sameYear = date.getFullYear() === today.getFullYear()
+  return date.toLocaleDateString([], sameYear
+    ? { month: 'short', day: 'numeric' }
+    : { month: 'short', day: 'numeric', year: 'numeric' })
+}
+
 export default function Conversation({ otherUser, onBack, onUnmatch }) {
   const { token, user, authFetch } = useAuth()
   const [messages, setMessages] = useState([])
@@ -76,14 +91,22 @@ export default function Conversation({ otherUser, onBack, onUnmatch }) {
         {messages.length === 0 && (
           <p className="conversation-empty">No messages yet. Say hello!</p>
         )}
-        {messages.map((msg) => {
+        {messages.map((msg, i) => {
           const mine = msg.sender === user.id
+          const ts = new Date(msg.timestamp)
+          const prevTs = i > 0 ? new Date(messages[i - 1].timestamp) : null
+          const showSeparator = !prevTs || prevTs.toDateString() !== ts.toDateString()
           return (
-            <div key={msg.id} className={`message-bubble ${mine ? 'mine' : 'theirs'}`}>
-              <p className="message-text">{msg.text}</p>
-              <span className="message-time">
-                {new Date(msg.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-              </span>
+            <div key={msg.id} className="message-row">
+              {showSeparator && (
+                <div className="conversation-date-separator">{formatDateSeparator(ts)}</div>
+              )}
+              <div className={`message-bubble ${mine ? 'mine' : 'theirs'}`}>
+                <p className="message-text">{msg.text}</p>
+                <span className="message-time">
+                  {ts.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                </span>
+              </div>
             </div>
           )
         })}

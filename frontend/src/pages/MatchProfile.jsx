@@ -1,7 +1,6 @@
 import { useState, useEffect, useMemo } from 'react'
 import { useAuth } from '../context/AuthContext'
 import { BASE_URL, FALLBACK_IMAGE } from '../lib/constants'
-import { formatFacetValue } from '../lib/format'
 
 export default function MatchProfile({ match, onBack, onMessage }) {
   const { token, authFetch } = useAuth()
@@ -34,8 +33,6 @@ export default function MatchProfile({ match, onBack, onMessage }) {
         if (res.ok) setProfile(await res.json())
       } catch { /* silent — header still shows username */ }
     }
-    setPhotoFailed(false)
-    setProfile(null)
     fetchFacets()
     fetchCommonLikes()
     fetchProfile()
@@ -108,7 +105,7 @@ export default function MatchProfile({ match, onBack, onMessage }) {
             <div className="taste-tags">
               {values.map(f => (
                 <span key={f.value} className={strengthClass(f.score)}>
-                  {formatFacetValue(f.facet, f.value)}
+                  {f.value}
                 </span>
               ))}
             </div>

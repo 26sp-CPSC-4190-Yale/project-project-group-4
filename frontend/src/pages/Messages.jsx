@@ -58,6 +58,7 @@ export default function Messages() {
   if (activeProfile) {
     return (
       <MatchProfile
+        key={activeProfile.user.id}
         match={activeProfile}
         onBack={() => setActiveProfile(null)}
         onMessage={user => {
