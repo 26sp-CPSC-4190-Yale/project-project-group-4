@@ -1,6 +1,6 @@
 'use strict';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { BASE_URL } from '../lib/constants';
 const NOTIF_POLL_INTERVAL = 30000;
@@ -8,23 +8,37 @@ const NOTIF_POLL_INTERVAL = 30000;
 export default function Layout({ activeTab, onNavigate, children }) {
   const { user, logout, token, authFetch } = useAuth();
   const [notifCount, setNotifCount] = useState(0);
+  const [pulse, setPulse] = useState(false);
+  const prevCountRef = useRef(null);
 
   useEffect(() => {
+    let pulseTimeout = null;
     async function fetchNotifications() {
       const res = await authFetch(`${BASE_URL}/api/notifications/`);
       if (res.ok) {
         const data = await res.json();
-        setNotifCount(data.new_matches + data.pending_requests);
+        const next = data.new_matches + data.pending_requests;
+        if (prevCountRef.current !== null && next > prevCountRef.current) {
+          setPulse(true);
+          if (pulseTimeout) clearTimeout(pulseTimeout);
+          pulseTimeout = setTimeout(() => setPulse(false), 400);
+        }
+        prevCountRef.current = next;
+        setNotifCount(next);
       }
     }
 
     fetchNotifications();
     const interval = setInterval(fetchNotifications, NOTIF_POLL_INTERVAL);
-    return () => clearInterval(interval);
+    return () => {
+      clearInterval(interval);
+      if (pulseTimeout) clearTimeout(pulseTimeout);
+    };
   }, [token]);
 
   function handleMessagesTab() {
     setNotifCount(0);
+    prevCountRef.current = 0;
     onNavigate('messages');
   }
 
@@ -69,7 +83,9 @@ export default function Layout({ activeTab, onNavigate, children }) {
         >
           <span className="tab-bar-icon tab-bar-icon-notif">
             ✉
-            {notifCount > 0 && <span className="notif-badge">{notifCount}</span>}
+            {notifCount > 0 && (
+              <span className={`notif-badge${pulse ? ' notif-badge-pulse' : ''}`}>{notifCount}</span>
+            )}
           </span>
           Messages
         </button>

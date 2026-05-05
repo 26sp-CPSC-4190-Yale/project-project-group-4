@@ -151,6 +151,7 @@ export default function Gallery() {
                     onError={skipCurrentArtwork}
                     style={{ opacity: imageReady ? 1 : 0, transition: 'opacity 0.3s ease' }}
                     draggable={false}
+                    decoding="async"
                   />
                   <div className="card-gradient">
                     <h2 className="card-title">{artwork.label}</h2>

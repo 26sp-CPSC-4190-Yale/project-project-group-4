@@ -464,6 +464,7 @@
   display: flex;
   flex-direction: column;
   overflow-y: auto;
+  overscroll-behavior: contain;
   scrollbar-gutter: stable;
   min-height: 0;
 }
@@ -791,6 +792,10 @@
   border-bottom-left-radius: 4px;
 }
 
+.message-bubble-pending {
+  opacity: 0.55;
+}
+
 .message-time {
   font-size: 0.72em;
   color: var(--text-muted);
@@ -1032,6 +1037,11 @@
   justify-content: center;
   padding: 0 4px;
   line-height: 1;
+  transform-origin: center;
+}
+
+.notif-badge-pulse {
+  animation: notif-pulse 360ms ease-out;
 }
 
 /* Status Messages */

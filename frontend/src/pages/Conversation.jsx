@@ -44,9 +44,26 @@ export default function Conversation({ otherUser, onBack, onUnmatch }) {
 
   useEffect(() => {
     if (unmatched) return;
-    fetchMessages();
-    const interval = setInterval(fetchMessages, POLL_INTERVAL);
-    return () => clearInterval(interval);
+    let interval = null;
+    function start() {
+      if (interval) return;
+      fetchMessages();
+      interval = setInterval(fetchMessages, POLL_INTERVAL);
+    }
+    function stop() {
+      if (!interval) return;
+      clearInterval(interval);
+      interval = null;
+    }
+    function onVisibility() {
+      if (document.hidden) stop(); else start();
+    }
+    if (!document.hidden) start();
+    document.addEventListener('visibilitychange', onVisibility);
+    return () => {
+      stop();
+      document.removeEventListener('visibilitychange', onVisibility);
+    };
   }, [otherUser.id, unmatched]);
 
   useEffect(() => {
@@ -57,7 +74,21 @@ export default function Conversation({ otherUser, onBack, onUnmatch }) {
     e.preventDefault();
     const trimmed = text.trim();
     if (!trimmed) return;
+
+    const pendingId = `pending-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
+    const pendingMsg = {
+      id: pendingId,
+      sender: user.id,
+      text: trimmed,
+      timestamp: new Date().toISOString(),
+      pending: true,
+    };
+
+    setMessages(prev => [...prev, pendingMsg]);
+    setText('');
     setSending(true);
+
+    let succeeded = false;
     try {
       const res = await authFetch(`${BASE_URL}/api/messages/${otherUser.id}/`, {
         method: 'POST',
@@ -65,10 +96,15 @@ export default function Conversation({ otherUser, onBack, onUnmatch }) {
         body: JSON.stringify({ text: trimmed }),
       });
       if (res.ok) {
-        setText('');
+        succeeded = true;
         await fetchMessages();
       }
-    } finally {
+    } catch { /* fall through to rollback */ }
+    finally {
+      if (!succeeded) {
+        setMessages(prev => prev.filter(m => m.id !== pendingId));
+        setText(trimmed);
+      }
       setSending(false);
     }
   }
@@ -103,7 +139,7 @@ export default function Conversation({ otherUser, onBack, onUnmatch }) {
               {showSeparator && (
                 <div className="conversation-date-separator">{formatDateSeparator(ts)}</div>
               )}
-              <div className={`message-bubble ${mine ? 'mine' : 'theirs'}`}>
+              <div className={`message-bubble ${mine ? 'mine' : 'theirs'}${msg.pending ? ' message-bubble-pending' : ''}`}>
                 <p className="message-text">{msg.text}</p>
                 <span className="message-time">
                   {ts.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
