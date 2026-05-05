@@ -1,7 +1,7 @@
 import threading
 
 from django.contrib.auth import authenticate
-from django.db import close_old_connections
+from django.db import close_old_connections, transaction
 from django.contrib.auth.models import User
 from django.db.models import Q
 from rest_framework.decorators import api_view, permission_classes
@@ -36,6 +36,14 @@ def _clamp(value, lo, hi):
         return lo
 
 
+def _rotate_token(user):
+    """Replace any existing token for user with a fresh one."""
+    with transaction.atomic():
+        User.objects.select_for_update().filter(pk=user.pk).first()
+        Token.objects.filter(user=user).delete()
+        return Token.objects.create(user=user)
+
+
 @api_view(['POST'])
 @permission_classes([AllowAny])
 def register(request):
@@ -58,9 +66,9 @@ def login(request):
     user = authenticate(username=username, password=password)
     if user is None:
         return Response({'error': 'Invalid credentials'}, status=status.HTTP_401_UNAUTHORIZED)
-    # Rotate the token on every login so the expiry window resets
-    Token.objects.filter(user=user).delete()
-    token = Token.objects.create(user=user)
+    # Rotate the token on every login so the expiry window resets and any
+    # other active session is invalidated.
+    token = _rotate_token(user)
     return Response({'token': token.key, 'user': {'id': user.id, 'username': user.username, 'email': user.email}})
 
 
@@ -109,8 +117,7 @@ def change_password(request):
     user.save()
 
     # Rotate token so other sessions are invalidated immediately
-    Token.objects.filter(user=user).delete()
-    new_token = Token.objects.create(user=user)
+    new_token = _rotate_token(user)
     return Response({'token': new_token.key}, status=status.HTTP_200_OK)
 
 
@@ -249,11 +256,24 @@ def user_profile(request):
             )
         from PIL import Image as PILImage
         import io
-        img = PILImage.open(photo)
-        img.thumbnail((400, 400))
-        buf = io.BytesIO()
-        fmt = 'WEBP' if photo.content_type == 'image/webp' else ('PNG' if photo.content_type == 'image/png' else 'JPEG')
-        img.save(buf, format=fmt)
+        # decompression-bomb defense
+        PILImage.MAX_IMAGE_PIXELS = 25_000_000
+        try:
+            img = PILImage.open(photo)
+            img.thumbnail((400, 400))
+            buf = io.BytesIO()
+            fmt = 'WEBP' if photo.content_type == 'image/webp' else ('PNG' if photo.content_type == 'image/png' else 'JPEG')
+            img.save(buf, format=fmt)
+        except PILImage.DecompressionBombError:
+            return Response(
+                {'error': 'Photo dimensions are too large'},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        except (OSError, ValueError):
+            return Response(
+                {'error': 'Photo could not be decoded'},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
         profile.photo_data = buf.getvalue()
         profile.photo_content_type = photo.content_type
 
@@ -265,8 +285,14 @@ def user_profile(request):
 
 
 @api_view(['GET'])
+@permission_classes([IsAuthenticated])
 def user_photo(request, user_id):
     """Serve a user's profile photo as raw bytes."""
+    if request.user.id != user_id:
+        match = _get_match(request.user, user_id)
+        if not match or match.status == Match.STATUS_DECLINED:
+            return Response(status=status.HTTP_404_NOT_FOUND)
+
     try:
         profile = UserProfile.objects.get(user_id=user_id)
     except UserProfile.DoesNotExist:
@@ -274,7 +300,8 @@ def user_photo(request, user_id):
     if not profile.photo_data:
         return Response(status=status.HTTP_404_NOT_FOUND)
     response = HttpResponse(profile.photo_data, content_type=profile.photo_content_type)
-    response['Cache-Control'] = 'public, max-age=3600'
+    # Unsafe to share across users -> keep it private and short-lived.
+    response['Cache-Control'] = 'private, max-age=300'
     return response
 
 
@@ -446,7 +473,7 @@ def unmatch(request, user_id):
 def match_facets(request, user_id):
     """Return the top shared taste facets between the current user and another matched user."""
     match = _get_match(request.user, user_id)
-    if not match:
+    if not match or match.status == Match.STATUS_DECLINED:
         return Response({'error': 'Match not found'}, status=status.HTTP_404_NOT_FOUND)
     return Response(_top_facets(request.user.id, user_id, limit=None))
 
@@ -454,8 +481,9 @@ def match_facets(request, user_id):
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
 def match_user_profile(request, user_id):
-    """Return another user's bio, photo flag, and username — gated by match presence."""
-    if not _get_match(request.user, user_id):
+    """Return another user's bio, photo flag, and username — gated by an active match."""
+    match = _get_match(request.user, user_id)
+    if not match or match.status == Match.STATUS_DECLINED:
         return Response({'error': 'Match not found'}, status=status.HTTP_404_NOT_FOUND)
     try:
         other = User.objects.get(id=user_id)
