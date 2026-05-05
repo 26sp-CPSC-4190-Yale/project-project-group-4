@@ -14,9 +14,12 @@ export default function useSwipe(onSwipe) {
   const startXRef = useRef(null)
   const startTimeRef = useRef(0)
   const hasDraggedRef = useRef(false)
+  const touchActiveRef = useRef(false)
+  const touchSettleTimerRef = useRef(null)
 
   const DRAG_DETECT_PX = 10
   const TAP_MAX_MS = 250
+  const TOUCH_SETTLE_MS = 600
 
   function handleSwipe(direction) {
     if (exiting) return
@@ -83,13 +86,25 @@ export default function useSwipe(onSwipe) {
       transition: cardTransition,
       pointerEvents: exiting ? 'none' : 'auto',
     },
-    onTouchStart: e => onPointerStart(e.touches[0].clientX),
+    onTouchStart: e => {
+      touchActiveRef.current = true
+      if (touchSettleTimerRef.current) clearTimeout(touchSettleTimerRef.current)
+      onPointerStart(e.touches[0].clientX)
+    },
     onTouchMove: e => onPointerMove(e.touches[0].clientX),
-    onTouchEnd: onPointerEnd,
-    onMouseDown: e => onPointerStart(e.clientX),
-    onMouseMove: e => { if (dragging) onPointerMove(e.clientX) },
-    onMouseUp: onPointerEnd,
-    onMouseLeave: () => { if (dragging) onPointerEnd() },
+    // Browsers dispatch synthetic mousedown/mouseup after touchend. Without the
+    // settle window below, those mouse handlers re-run onPointerEnd and toggle
+    // the flip state a second time, cancelling the touch flip.
+    onTouchEnd: () => {
+      onPointerEnd()
+      touchSettleTimerRef.current = setTimeout(() => {
+        touchActiveRef.current = false
+      }, TOUCH_SETTLE_MS)
+    },
+    onMouseDown: e => { if (!touchActiveRef.current) onPointerStart(e.clientX) },
+    onMouseMove: e => { if (!touchActiveRef.current && dragging) onPointerMove(e.clientX) },
+    onMouseUp: () => { if (!touchActiveRef.current) onPointerEnd() },
+    onMouseLeave: () => { if (!touchActiveRef.current && dragging) onPointerEnd() },
   }
 
   return {
