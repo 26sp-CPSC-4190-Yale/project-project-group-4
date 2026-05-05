@@ -1,132 +1,134 @@
-import { useEffect, useMemo, useState } from 'react'
-import { useAuth } from '../context/AuthContext'
-import { BASE_URL, FALLBACK_IMAGE } from '../lib/constants'
-import { formatCentury } from '../lib/format'
+'use strict';
+
+import { useEffect, useMemo, useState } from 'react';
+import { useAuth } from '../context/AuthContext';
+import { BASE_URL, FALLBACK_IMAGE } from '../lib/constants';
+import { formatCentury } from '../lib/format';
 
 export default function TasteProfile() {
-  const { token, authFetch } = useAuth()
-  const [signals, setSignals] = useState([])
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState(null)
+  const { token, authFetch } = useAuth();
+  const [signals, setSignals] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
 
   // Liked artworks state
-  const [likedArtworks, setLikedArtworks] = useState([])
-  const [likedTotal, setLikedTotal] = useState(0)
-  const [likedOffset, setLikedOffset] = useState(0)
-  const [likedLoading, setLikedLoading] = useState(true)
-  const [flippedCards, setFlippedCards] = useState(new Set())
-  const LIKED_PAGE_SIZE = 10
+  const [likedArtworks, setLikedArtworks] = useState([]);
+  const [likedTotal, setLikedTotal] = useState(0);
+  const [likedOffset, setLikedOffset] = useState(0);
+  const [likedLoading, setLikedLoading] = useState(true);
+  const [flippedCards, setFlippedCards] = useState(new Set());
+  const LIKED_PAGE_SIZE = 10;
 
   // Art of the Day state
-  const [candidates, setCandidates] = useState([])
-  const [explanation, setExplanation] = useState([])
-  const [candidateIndex, setCandidateIndex] = useState(0)
-  const [isPopular, setIsPopular] = useState(false)
-  const [aotdLoading, setAotdLoading] = useState(true)
-  const [imageReady, setImageReady] = useState(false)
+  const [candidates, setCandidates] = useState([]);
+  const [explanation, setExplanation] = useState([]);
+  const [candidateIndex, setCandidateIndex] = useState(0);
+  const [isPopular, setIsPopular] = useState(false);
+  const [aotdLoading, setAotdLoading] = useState(true);
+  const [imageReady, setImageReady] = useState(false);
 
   async function fetchLiked(offset = 0) {
     try {
       const res = await authFetch(
         `${BASE_URL}/api/liked/?limit=${LIKED_PAGE_SIZE}&offset=${offset}`,
-      )
-      if (!res.ok) throw new Error()
-      const data = await res.json()
-      setLikedArtworks(prev => offset === 0 ? data.results : [...prev, ...data.results])
-      setLikedTotal(data.count)
-      setLikedOffset(offset + data.results.length)
+      );
+      if (!res.ok) throw new Error();
+      const data = await res.json();
+      setLikedArtworks(prev => offset === 0 ? data.results : [...prev, ...data.results]);
+      setLikedTotal(data.count);
+      setLikedOffset(offset + data.results.length);
     } catch { /* taste profile still shows */ }
-    finally { setLikedLoading(false) }
+    finally { setLikedLoading(false); }
   }
 
   useEffect(() => {
     async function fetchTaste() {
       try {
-        const tasteRes = await authFetch(`${BASE_URL}/api/taste/me/`)
-        if (!tasteRes.ok) throw new Error()
-        const tasteData = await tasteRes.json()
-        setSignals(tasteData.signals || [])
+        const tasteRes = await authFetch(`${BASE_URL}/api/taste/me/`);
+        if (!tasteRes.ok) throw new Error();
+        const tasteData = await tasteRes.json();
+        setSignals(tasteData.signals || []);
       } catch {
-        setError('Failed to load taste profile.')
+        setError('Failed to load taste profile.');
       } finally {
-        setLoading(false)
+        setLoading(false);
       }
     }
 
     async function fetchDaily() {
       try {
-        const res = await authFetch(`${BASE_URL}/api/art-of-the-day/`)
-        if (!res.ok) throw new Error()
-        const data = await res.json()
-        setCandidates(data.candidates || [])
-        setExplanation(data.explanation || [])
-        setIsPopular(data.is_popular || false)
+        const res = await authFetch(`${BASE_URL}/api/art-of-the-day/`);
+        if (!res.ok) throw new Error();
+        const data = await res.json();
+        setCandidates(data.candidates || []);
+        setExplanation(data.explanation || []);
+        setIsPopular(data.is_popular || false);
       } catch {
         // silent fail — taste profile still shows
       } finally {
-        setAotdLoading(false)
+        setAotdLoading(false);
       }
     }
 
-    fetchTaste()
-    fetchDaily()
-    fetchLiked()
-  }, [token])
+    fetchTaste();
+    fetchDaily();
+    fetchLiked();
+  }, [token]);
 
   const grouped = useMemo(() => {
-    const result = {}
+    const result = {};
     signals.forEach(signal => {
-      if (!result[signal.facet]) result[signal.facet] = []
-      result[signal.facet].push(signal)
-    })
-    return result
-  }, [signals])
+      if (!result[signal.facet]) result[signal.facet] = [];
+      result[signal.facet].push(signal);
+    });
+    return result;
+  }, [signals]);
 
-  const dailyArt = candidates[candidateIndex] || null
-  const allCandidatesFailed = candidateIndex >= candidates.length && candidates.length > 0
+  const dailyArt = candidates[candidateIndex] || null;
+  const allCandidatesFailed = candidateIndex >= candidates.length && candidates.length > 0;
 
-  const [usedFallback, setUsedFallback] = useState(false)
+  const [usedFallback, setUsedFallback] = useState(false);
 
   function handleImageError() {
-    setImageReady(false)
-    setCandidateIndex(i => i + 1)
+    setImageReady(false);
+    setCandidateIndex(i => i + 1);
   }
 
   useEffect(() => {
     if (!usedFallback && candidateIndex >= candidates.length && candidates.length > 0) {
-      setUsedFallback(true)
+      setUsedFallback(true);
       authFetch(`${BASE_URL}/api/art-of-the-day/?fallback=true`)
         .then(res => res.ok ? res.json() : null)
         .then(data => {
           if (data?.candidates?.length) {
-            setCandidates(data.candidates)
-            setCandidateIndex(0)
-            setExplanation([])
-            setIsPopular(true)
+            setCandidates(data.candidates);
+            setCandidateIndex(0);
+            setExplanation([]);
+            setIsPopular(true);
           }
         })
-        .catch(() => {})
+        .catch(() => {});
     }
-  }, [candidateIndex, candidates.length, usedFallback, token])
+  }, [candidateIndex, candidates.length, usedFallback, token]);
 
   function formatAgent(agent) {
-    let str = agent.name
+    let str = agent.name;
     if (agent.role && agent.role !== 'Artist') {
-      str += ` (${agent.role})`
+      str += ` (${agent.role})`;
     }
     if (agent.nationalities?.length) {
-      str += `, ${agent.nationalities.join(', ')}`
+      str += `, ${agent.nationalities.join(', ')}`;
     }
     if (agent.begin_date) {
-      const birth = agent.begin_date.slice(0, 4)
-      const death = agent.end_date ? agent.end_date.slice(0, 4) : 'present'
-      str += ` (${birth}\u2013${death})`
+      const birth = agent.begin_date.slice(0, 4);
+      const death = agent.end_date ? agent.end_date.slice(0, 4) : 'present';
+      str += ` (${birth}\u2013${death})`;
     }
-    return str
+    return str;
   }
 
-  if (loading) return <p className="status-message">Analyzing your taste...</p>
-  if (error) return <p className="error-message">{error}</p>
+  if (loading) return <p className="status-message">Analyzing your taste...</p>;
+  if (error) return <p className="error-message">{error}</p>;
 
   return (
     <div className="profile-page">
@@ -257,15 +259,15 @@ export default function TasteProfile() {
           <>
             <div className="likes-grid">
               {likedArtworks.map(artwork => {
-                const isFlipped = flippedCards.has(artwork.id)
+                const isFlipped = flippedCards.has(artwork.id);
                 return (
                   <div
                     key={artwork.id}
                     className="likes-card"
                     onClick={() => setFlippedCards(prev => {
-                      const next = new Set(prev)
-                      next.has(artwork.id) ? next.delete(artwork.id) : next.add(artwork.id)
-                      return next
+                      const next = new Set(prev);
+                      next.has(artwork.id) ? next.delete(artwork.id) : next.add(artwork.id);
+                      return next;
                     })}
                   >
                     <div
@@ -276,7 +278,7 @@ export default function TasteProfile() {
                         <img
                           src={`https://media.collections.yale.edu/thumbnail/yuag/obj/${artwork.id}`}
                           alt={artwork.label}
-                          onError={e => { e.target.src = FALLBACK_IMAGE }}
+                          onError={e => { e.target.src = FALLBACK_IMAGE; }}
                         />
                         <div className="likes-card-body">
                           <p className="likes-card-title">{artwork.label}</p>
@@ -301,7 +303,7 @@ export default function TasteProfile() {
                       </div>
                     </div>
                   </div>
-                )
+                );
               })}
             </div>
             {likedOffset < likedTotal && (
@@ -337,5 +339,5 @@ export default function TasteProfile() {
         ))
       )}
     </div>
-  )
+  );
 }

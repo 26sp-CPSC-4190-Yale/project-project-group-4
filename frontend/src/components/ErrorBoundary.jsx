@@ -1,10 +1,12 @@
-import { Component } from 'react'
+'use strict';
+
+import { Component } from 'react';
 
 export default class ErrorBoundary extends Component {
-  state = { hasError: false }
+  state = { hasError: false };
 
   static getDerivedStateFromError() {
-    return { hasError: true }
+    return { hasError: true };
   }
 
   render() {
@@ -15,8 +17,8 @@ export default class ErrorBoundary extends Component {
           <p>An unexpected error occurred.</p>
           <button onClick={() => window.location.reload()}>Reload</button>
         </div>
-      )
+      );
     }
-    return this.props.children
+    return this.props.children;
   }
 }

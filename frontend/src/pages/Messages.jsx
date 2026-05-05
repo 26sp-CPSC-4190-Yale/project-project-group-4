@@ -1,19 +1,21 @@
-import { useState, useEffect } from 'react'
-import { useAuth } from '../context/AuthContext'
-import { BASE_URL } from '../lib/constants'
-import Conversation from './Conversation'
-import MatchProfile from './MatchProfile'
-import { formatFacetValue } from '../lib/format'
+'use strict';
+
+import { useState, useEffect } from 'react';
+import { useAuth } from '../context/AuthContext';
+import { BASE_URL } from '../lib/constants';
+import Conversation from './Conversation';
+import MatchProfile from './MatchProfile';
+import { formatFacetValue } from '../lib/format';
 
 function FacetTags({ facets }) {
-  if (!facets || facets.length === 0) return null
+  if (!facets || facets.length === 0) return null;
   return (
     <div className="match-facets">
       {facets.map((f, i) => (
         <span key={i} className="match-facet-tag">{formatFacetValue(f.facet, f.value)}</span>
       ))}
     </div>
-  )
+  );
 }
 
 function MatchCard({ m, actions }) {
@@ -27,32 +29,32 @@ function MatchCard({ m, actions }) {
       </div>
       <div className="match-actions">{actions}</div>
     </div>
-  )
+  );
 }
 
 export default function Messages() {
-  const { token, authFetch } = useAuth()
-  const [matches, setMatches] = useState([])
-  const [loading, setLoading] = useState(true)
-  const [activeConversation, setActiveConversation] = useState(null)
-  const [activeProfile, setActiveProfile] = useState(null)
+  const { token, authFetch } = useAuth();
+  const [matches, setMatches] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [activeConversation, setActiveConversation] = useState(null);
+  const [activeProfile, setActiveProfile] = useState(null);
 
 
   async function fetchMatches() {
-    const res = await authFetch(`${BASE_URL}/api/matches/`)
-    if (res.ok) setMatches(await res.json())
-    setLoading(false)
+    const res = await authFetch(`${BASE_URL}/api/matches/`);
+    if (res.ok) setMatches(await res.json());
+    setLoading(false);
   }
 
-  useEffect(() => { fetchMatches() }, [token])
+  useEffect(() => { fetchMatches(); }, [token]);
 
   async function performAction(userId, action) {
     const res = await authFetch(`${BASE_URL}/api/matches/${userId}/action/`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ action }),
-    })
-    if (res.ok) fetchMatches()
+    });
+    if (res.ok) fetchMatches();
   }
 
   if (activeProfile) {
@@ -62,27 +64,27 @@ export default function Messages() {
         match={activeProfile}
         onBack={() => setActiveProfile(null)}
         onMessage={user => {
-          setActiveProfile(null)
-          setActiveConversation(user)
+          setActiveProfile(null);
+          setActiveConversation(user);
         }}
       />
-    )
+    );
   }
 
   if (activeConversation) {
     return (
       <Conversation
         otherUser={activeConversation}
-        onBack={() => { setActiveConversation(null); fetchMatches() }}
-        onUnmatch={() => { setActiveConversation(null); fetchMatches() }}
+        onBack={() => { setActiveConversation(null); fetchMatches(); }}
+        onUnmatch={() => { setActiveConversation(null); fetchMatches(); }}
       />
-    )
+    );
   }
 
-  const newMatches = matches.filter(m => m.status === 'pending')
-  const incoming = matches.filter(m => m.status === 'requested' && !m.requested_by_me)
-  const sent = matches.filter(m => m.status === 'requested' && m.requested_by_me)
-  const conversations = matches.filter(m => m.status === 'accepted')
+  const newMatches = matches.filter(m => m.status === 'pending');
+  const incoming = matches.filter(m => m.status === 'requested' && !m.requested_by_me);
+  const sent = matches.filter(m => m.status === 'requested' && m.requested_by_me);
+  const conversations = matches.filter(m => m.status === 'accepted');
 
   return (
     <div className="messages-page">
@@ -160,5 +162,5 @@ export default function Messages() {
         <p className="messages-empty">No matches yet. Keep swiping!</p>
       )}
     </div>
-  )
+  );
 }

@@ -1,58 +1,60 @@
-import { useState, useEffect, useMemo } from 'react'
-import { useAuth } from '../context/AuthContext'
-import { BASE_URL, FALLBACK_IMAGE } from '../lib/constants'
+'use strict';
+
+import { useState, useEffect, useMemo } from 'react';
+import { useAuth } from '../context/AuthContext';
+import { BASE_URL, FALLBACK_IMAGE } from '../lib/constants';
 
 export default function MatchProfile({ match, onBack, onMessage }) {
-  const { token, authFetch } = useAuth()
-  const [facets, setFacets] = useState(null)
-  const [commonArt, setCommonArt] = useState([])
-  const [commonTotal, setCommonTotal] = useState(0)
-  const [profile, setProfile] = useState(null)
-  const [photoFailed, setPhotoFailed] = useState(false)
+  const { token, authFetch } = useAuth();
+  const [facets, setFacets] = useState(null);
+  const [commonArt, setCommonArt] = useState([]);
+  const [commonTotal, setCommonTotal] = useState(0);
+  const [profile, setProfile] = useState(null);
+  const [photoFailed, setPhotoFailed] = useState(false);
 
   useEffect(() => {
     async function fetchFacets() {
       try {
-        const res = await authFetch(`${BASE_URL}/api/matches/${match.user.id}/facets/`)
-        if (res.ok) setFacets(await res.json())
+        const res = await authFetch(`${BASE_URL}/api/matches/${match.user.id}/facets/`);
+        if (res.ok) setFacets(await res.json());
       } catch { /* fall back to match.top_facets */ }
     }
     async function fetchCommonLikes() {
       try {
-        const res = await authFetch(`${BASE_URL}/api/matches/${match.user.id}/common-likes/`)
+        const res = await authFetch(`${BASE_URL}/api/matches/${match.user.id}/common-likes/`);
         if (res.ok) {
-          const data = await res.json()
-          setCommonArt(data.results)
-          setCommonTotal(data.count)
+          const data = await res.json();
+          setCommonArt(data.results);
+          setCommonTotal(data.count);
         }
       } catch { /* silent */ }
     }
     async function fetchProfile() {
       try {
-        const res = await authFetch(`${BASE_URL}/api/matches/${match.user.id}/profile/`)
-        if (res.ok) setProfile(await res.json())
+        const res = await authFetch(`${BASE_URL}/api/matches/${match.user.id}/profile/`);
+        if (res.ok) setProfile(await res.json());
       } catch { /* silent — header still shows username */ }
     }
-    fetchFacets()
-    fetchCommonLikes()
-    fetchProfile()
-  }, [match.user.id, token])
+    fetchFacets();
+    fetchCommonLikes();
+    fetchProfile();
+  }, [match.user.id, token]);
 
-  const allFacets = facets ?? match.top_facets ?? []
+  const allFacets = facets ?? match.top_facets ?? [];
 
   const grouped = useMemo(() => {
-    const result = {}
+    const result = {};
     allFacets.forEach(f => {
-      if (!result[f.facet]) result[f.facet] = []
-      result[f.facet].push(f)
-    })
-    return result
-  }, [allFacets])
+      if (!result[f.facet]) result[f.facet] = [];
+      result[f.facet].push(f);
+    });
+    return result;
+  }, [allFacets]);
 
   function strengthClass(score) {
-    if (score > 0.7) return 'taste-tag taste-tag-strong'
-    if (score < 0.5) return 'taste-tag taste-tag-muted'
-    return 'taste-tag'
+    if (score > 0.7) return 'taste-tag taste-tag-strong';
+    if (score < 0.5) return 'taste-tag taste-tag-muted';
+    return 'taste-tag';
   }
 
   return (
@@ -129,7 +131,7 @@ export default function MatchProfile({ match, onBack, onMessage }) {
                 <img
                   src={`https://media.collections.yale.edu/thumbnail/yuag/obj/${artwork.id}`}
                   alt={artwork.label}
-                  onError={e => { e.target.src = FALLBACK_IMAGE }}
+                  onError={e => { e.target.src = FALLBACK_IMAGE; }}
                 />
               </div>
             ))}
@@ -145,5 +147,5 @@ export default function MatchProfile({ match, onBack, onMessage }) {
         </button>
       )}
     </div>
-  )
+  );
 }

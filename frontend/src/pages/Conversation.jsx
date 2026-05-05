@@ -1,82 +1,84 @@
-import { useState, useEffect, useRef } from 'react'
-import { useAuth } from '../context/AuthContext'
-import { BASE_URL } from '../lib/constants'
-const POLL_INTERVAL = 4000
+'use strict';
+
+import { useState, useEffect, useRef } from 'react';
+import { useAuth } from '../context/AuthContext';
+import { BASE_URL } from '../lib/constants';
+const POLL_INTERVAL = 4000;
 
 function formatDateSeparator(date) {
-  const today = new Date()
-  const yesterday = new Date()
-  yesterday.setDate(today.getDate() - 1)
-  const sameDay = (a, b) => a.toDateString() === b.toDateString()
-  if (sameDay(date, today)) return 'Today'
-  if (sameDay(date, yesterday)) return 'Yesterday'
-  const daysAgo = (today - date) / (1000 * 60 * 60 * 24)
-  if (daysAgo < 7) return date.toLocaleDateString([], { weekday: 'long' })
-  const sameYear = date.getFullYear() === today.getFullYear()
+  const today = new Date();
+  const yesterday = new Date();
+  yesterday.setDate(today.getDate() - 1);
+  const sameDay = (a, b) => a.toDateString() === b.toDateString();
+  if (sameDay(date, today)) return 'Today';
+  if (sameDay(date, yesterday)) return 'Yesterday';
+  const daysAgo = (today - date) / (1000 * 60 * 60 * 24);
+  if (daysAgo < 7) return date.toLocaleDateString([], { weekday: 'long' });
+  const sameYear = date.getFullYear() === today.getFullYear();
   return date.toLocaleDateString([], sameYear
     ? { month: 'short', day: 'numeric' }
-    : { month: 'short', day: 'numeric', year: 'numeric' })
+    : { month: 'short', day: 'numeric', year: 'numeric' });
 }
 
 export default function Conversation({ otherUser, onBack, onUnmatch }) {
-  const { token, user, authFetch } = useAuth()
-  const [messages, setMessages] = useState([])
-  const [text, setText] = useState('')
-  const [sending, setSending] = useState(false)
-  const [unmatched, setUnmatched] = useState(false)
-  const bottomRef = useRef(null)
+  const { token, user, authFetch } = useAuth();
+  const [messages, setMessages] = useState([]);
+  const [text, setText] = useState('');
+  const [sending, setSending] = useState(false);
+  const [unmatched, setUnmatched] = useState(false);
+  const bottomRef = useRef(null);
 
   async function fetchMessages() {
     try {
-      const res = await authFetch(`${BASE_URL}/api/messages/${otherUser.id}/`)
+      const res = await authFetch(`${BASE_URL}/api/messages/${otherUser.id}/`);
       if (res.status === 403) {
-        setUnmatched(true)
-        return
+        setUnmatched(true);
+        return;
       }
       if (res.ok) {
-        const data = await res.json()
-        setMessages(data)
+        const data = await res.json();
+        setMessages(data);
       }
     } catch { /* network error, will retry next poll */ }
   }
 
   useEffect(() => {
-    if (unmatched) return
-    fetchMessages()
-    const interval = setInterval(fetchMessages, POLL_INTERVAL)
-    return () => clearInterval(interval)
-  }, [otherUser.id, unmatched])
+    if (unmatched) return;
+    fetchMessages();
+    const interval = setInterval(fetchMessages, POLL_INTERVAL);
+    return () => clearInterval(interval);
+  }, [otherUser.id, unmatched]);
 
   useEffect(() => {
-    bottomRef.current?.scrollIntoView({ behavior: 'smooth' })
-  }, [messages])
+    bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
+  }, [messages]);
 
   async function handleSend(e) {
-    e.preventDefault()
-    const trimmed = text.trim()
-    if (!trimmed) return
-    setSending(true)
+    e.preventDefault();
+    const trimmed = text.trim();
+    if (!trimmed) return;
+    setSending(true);
     try {
       const res = await authFetch(`${BASE_URL}/api/messages/${otherUser.id}/`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ text: trimmed }),
-      })
+      });
       if (res.ok) {
-        setText('')
-        await fetchMessages()
+        setText('');
+        await fetchMessages();
       }
     } finally {
-      setSending(false)
+      setSending(false);
     }
   }
 
   async function handleUnmatch() {
-    if (!confirm(`Unmatch with ${otherUser.username}? This will delete all messages.`)) return
+    if (!confirm(`Unmatch with ${otherUser.username}? This will delete all messages.`)) return;
     const res = await authFetch(`${BASE_URL}/api/matches/${otherUser.id}/`, {
       method: 'DELETE',
-    })
-    if (res.ok) onUnmatch()
+    });
+    if (res.ok) onUnmatch();
   }
 
   return (
@@ -92,10 +94,10 @@ export default function Conversation({ otherUser, onBack, onUnmatch }) {
           <p className="conversation-empty">No messages yet. Say hello!</p>
         )}
         {messages.map((msg, i) => {
-          const mine = msg.sender === user.id
-          const ts = new Date(msg.timestamp)
-          const prevTs = i > 0 ? new Date(messages[i - 1].timestamp) : null
-          const showSeparator = !prevTs || prevTs.toDateString() !== ts.toDateString()
+          const mine = msg.sender === user.id;
+          const ts = new Date(msg.timestamp);
+          const prevTs = i > 0 ? new Date(messages[i - 1].timestamp) : null;
+          const showSeparator = !prevTs || prevTs.toDateString() !== ts.toDateString();
           return (
             <div key={msg.id} className="message-row">
               {showSeparator && (
@@ -108,7 +110,7 @@ export default function Conversation({ otherUser, onBack, onUnmatch }) {
                 </span>
               </div>
             </div>
-          )
+          );
         })}
         <div ref={bottomRef} />
       </div>
@@ -142,5 +144,5 @@ export default function Conversation({ otherUser, onBack, onUnmatch }) {
         </form>
       )}
     </div>
-  )
+  );
 }

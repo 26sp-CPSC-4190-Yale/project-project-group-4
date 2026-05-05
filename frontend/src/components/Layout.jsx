@@ -1,29 +1,31 @@
-import { useState, useEffect } from 'react'
-import { useAuth } from '../context/AuthContext'
-import { BASE_URL } from '../lib/constants'
-const NOTIF_POLL_INTERVAL = 30000
+'use strict';
+
+import { useState, useEffect } from 'react';
+import { useAuth } from '../context/AuthContext';
+import { BASE_URL } from '../lib/constants';
+const NOTIF_POLL_INTERVAL = 30000;
 
 export default function Layout({ activeTab, onNavigate, children }) {
-  const { user, logout, token, authFetch } = useAuth()
-  const [notifCount, setNotifCount] = useState(0)
+  const { user, logout, token, authFetch } = useAuth();
+  const [notifCount, setNotifCount] = useState(0);
 
   useEffect(() => {
     async function fetchNotifications() {
-      const res = await authFetch(`${BASE_URL}/api/notifications/`)
+      const res = await authFetch(`${BASE_URL}/api/notifications/`);
       if (res.ok) {
-        const data = await res.json()
-        setNotifCount(data.new_matches + data.pending_requests)
+        const data = await res.json();
+        setNotifCount(data.new_matches + data.pending_requests);
       }
     }
 
-    fetchNotifications()
-    const interval = setInterval(fetchNotifications, NOTIF_POLL_INTERVAL)
-    return () => clearInterval(interval)
-  }, [token])
+    fetchNotifications();
+    const interval = setInterval(fetchNotifications, NOTIF_POLL_INTERVAL);
+    return () => clearInterval(interval);
+  }, [token]);
 
   function handleMessagesTab() {
-    setNotifCount(0)
-    onNavigate('messages')
+    setNotifCount(0);
+    onNavigate('messages');
   }
 
   return (
@@ -73,5 +75,5 @@ export default function Layout({ activeTab, onNavigate, children }) {
         </button>
       </footer>
     </>
-  )
+  );
 }

@@ -1,25 +1,27 @@
-import { useState, useEffect, useRef } from 'react'
-import { useAuth } from '../context/AuthContext'
-import { BASE_URL } from '../lib/constants'
+'use strict';
+
+import { useState, useEffect, useRef } from 'react';
+import { useAuth } from '../context/AuthContext';
+import { BASE_URL } from '../lib/constants';
 
 export default function Profile() {
-  const { token, user, login, changePassword, authFetch } = useAuth()
-  const [stats, setStats] = useState(null)
-  const [bio, setBio] = useState('')
-  const [hasPhoto, setHasPhoto] = useState(false)
-  const [photoUrl, setPhotoUrl] = useState(null)
-  const [loading, setLoading] = useState(true)
-  const [saving, setSaving] = useState(false)
-  const [error, setError] = useState(null)
-  const [success, setSuccess] = useState(null)
-  const fileInputRef = useRef(null)
+  const { token, user, login, changePassword, authFetch } = useAuth();
+  const [stats, setStats] = useState(null);
+  const [bio, setBio] = useState('');
+  const [hasPhoto, setHasPhoto] = useState(false);
+  const [photoUrl, setPhotoUrl] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState(null);
+  const [success, setSuccess] = useState(null);
+  const fileInputRef = useRef(null);
 
-  const [currentPw, setCurrentPw] = useState('')
-  const [newPw, setNewPw] = useState('')
-  const [confirmPw, setConfirmPw] = useState('')
-  const [pwSaving, setPwSaving] = useState(false)
-  const [pwError, setPwError] = useState(null)
-  const [pwSuccess, setPwSuccess] = useState(null)
+  const [currentPw, setCurrentPw] = useState('');
+  const [newPw, setNewPw] = useState('');
+  const [confirmPw, setConfirmPw] = useState('');
+  const [pwSaving, setPwSaving] = useState(false);
+  const [pwError, setPwError] = useState(null);
+  const [pwSuccess, setPwSuccess] = useState(null);
 
   useEffect(() => {
     async function fetchProfile() {
@@ -27,89 +29,89 @@ export default function Profile() {
         const [statsRes, profileRes] = await Promise.all([
           authFetch(`${BASE_URL}/api/profile/stats/`),
           authFetch(`${BASE_URL}/api/profile/me/`),
-        ])
-        if (!statsRes.ok || !profileRes.ok) throw new Error()
+        ]);
+        if (!statsRes.ok || !profileRes.ok) throw new Error();
         const [statsData, profileData] = await Promise.all([
           statsRes.json(),
           profileRes.json(),
-        ])
-        setStats(statsData)
-        setBio(profileData.bio || '')
-        setHasPhoto(profileData.has_photo)
+        ]);
+        setStats(statsData);
+        setBio(profileData.bio || '');
+        setHasPhoto(profileData.has_photo);
         if (profileData.has_photo) {
-          setPhotoUrl(`${BASE_URL}/api/profile/photo/${user.id}/?t=${Date.now()}`)
+          setPhotoUrl(`${BASE_URL}/api/profile/photo/${user.id}/?t=${Date.now()}`);
         }
       } catch {
-        setError('Failed to load profile data.')
+        setError('Failed to load profile data.');
       } finally {
-        setLoading(false)
+        setLoading(false);
       }
     }
-    fetchProfile()
-  }, [token, user.id])
+    fetchProfile();
+  }, [token, user.id]);
 
   async function handleSave() {
-    setSaving(true)
-    setError(null)
-    setSuccess(null)
+    setSaving(true);
+    setError(null);
+    setSuccess(null);
     try {
-      const formData = new FormData()
-      formData.append('bio', bio)
+      const formData = new FormData();
+      formData.append('bio', bio);
       const res = await authFetch(`${BASE_URL}/api/profile/me/`, {
         method: 'PATCH',
         body: formData,
-      })
+      });
       if (!res.ok) {
-        const data = await res.json()
-        throw new Error(data.error || 'Save failed')
+        const data = await res.json();
+        throw new Error(data.error || 'Save failed');
       }
-      setSuccess('Profile saved!')
-      setTimeout(() => setSuccess(null), 2000)
+      setSuccess('Profile saved!');
+      setTimeout(() => setSuccess(null), 2000);
     } catch (e) {
-      setError(e.message)
+      setError(e.message);
     } finally {
-      setSaving(false)
+      setSaving(false);
     }
   }
 
   async function handlePhotoChange(e) {
-    const file = e.target.files?.[0]
-    if (!file) return
-    setSaving(true)
-    setError(null)
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setSaving(true);
+    setError(null);
     try {
-      const formData = new FormData()
-      formData.append('photo', file)
+      const formData = new FormData();
+      formData.append('photo', file);
       const res = await authFetch(`${BASE_URL}/api/profile/me/`, {
         method: 'PATCH',
         body: formData,
-      })
+      });
       if (!res.ok) {
-        const data = await res.json()
-        throw new Error(data.error || 'Upload failed')
+        const data = await res.json();
+        throw new Error(data.error || 'Upload failed');
       }
-      setHasPhoto(true)
-      setPhotoUrl(`${BASE_URL}/api/profile/photo/${user.id}/?t=${Date.now()}`)
+      setHasPhoto(true);
+      setPhotoUrl(`${BASE_URL}/api/profile/photo/${user.id}/?t=${Date.now()}`);
     } catch (e) {
-      setError(e.message)
+      setError(e.message);
     } finally {
-      setSaving(false)
+      setSaving(false);
     }
   }
 
-  const initial = user?.username?.[0]?.toUpperCase() ?? '?'
+  const initial = user?.username?.[0]?.toUpperCase() ?? '?';
 
   const memberSince = stats?.date_joined
     ? new Date(stats.date_joined).toLocaleDateString('en-US', {
         year: 'numeric',
         month: 'long',
       })
-    : null
+    : null;
 
   const likeRatePercent =
     stats && (stats.total_likes + stats.total_passes) > 0
       ? Math.round(stats.like_rate * 100)
-      : null
+      : null;
 
   return (
     <div className="profile-page">
@@ -233,22 +235,22 @@ export default function Profile() {
           className="profile-save-btn"
           disabled={pwSaving}
           onClick={async () => {
-            setPwError(null)
-            setPwSuccess(null)
-            if (newPw !== confirmPw) { setPwError('Passwords do not match'); return }
-            if (newPw.length < 8) { setPwError('New password must be at least 8 characters'); return }
-            setPwSaving(true)
+            setPwError(null);
+            setPwSuccess(null);
+            if (newPw !== confirmPw) { setPwError('Passwords do not match'); return; }
+            if (newPw.length < 8) { setPwError('New password must be at least 8 characters'); return; }
+            setPwSaving(true);
             try {
-              await changePassword(currentPw, newPw)
-              setCurrentPw('')
-              setNewPw('')
-              setConfirmPw('')
-              setPwSuccess('Password changed!')
-              setTimeout(() => setPwSuccess(null), 3000)
+              await changePassword(currentPw, newPw);
+              setCurrentPw('');
+              setNewPw('');
+              setConfirmPw('');
+              setPwSuccess('Password changed!');
+              setTimeout(() => setPwSuccess(null), 3000);
             } catch (e) {
-              setPwError(e.message)
+              setPwError(e.message);
             } finally {
-              setPwSaving(false)
+              setPwSaving(false);
             }
           }}
         >
@@ -256,5 +258,5 @@ export default function Profile() {
         </button>
       </section>
     </div>
-  )
+  );
 }

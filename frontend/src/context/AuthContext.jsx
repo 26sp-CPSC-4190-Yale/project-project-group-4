@@ -1,38 +1,40 @@
-import { createContext, useContext, useState, useCallback } from 'react'
-import { BASE_URL } from '../lib/constants'
+'use strict';
 
-const AuthContext = createContext(null)
+import { createContext, useContext, useState, useCallback } from 'react';
+import { BASE_URL } from '../lib/constants';
+
+const AuthContext = createContext(null);
 
 export function AuthProvider({ children }) {
-  const [token, setToken] = useState(() => localStorage.getItem('token'))
+  const [token, setToken] = useState(() => localStorage.getItem('token'));
   const [user, setUser] = useState(() => {
-    const stored = localStorage.getItem('user')
-    return stored ? JSON.parse(stored) : null
-  })
+    const stored = localStorage.getItem('user');
+    return stored ? JSON.parse(stored) : null;
+  });
 
   // Clears all local auth state — called on explicit logout and on token expiry.
   const _clearAuth = useCallback(() => {
-    localStorage.removeItem('token')
-    localStorage.removeItem('user')
-    setToken(null)
-    setUser(null)
-  }, [])
+    localStorage.removeItem('token');
+    localStorage.removeItem('user');
+    setToken(null);
+    setUser(null);
+  }, []);
 
   async function login(username, password) {
     const res = await fetch(`${BASE_URL}/api/auth/login/`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ username, password }),
-    })
+    });
     if (!res.ok) {
-      const err = await res.json()
-      throw new Error(err.error || 'Login failed')
+      const err = await res.json();
+      throw new Error(err.error || 'Login failed');
     }
-    const data = await res.json()
-    localStorage.setItem('token', data.token)
-    localStorage.setItem('user', JSON.stringify(data.user))
-    setToken(data.token)
-    setUser(data.user)
+    const data = await res.json();
+    localStorage.setItem('token', data.token);
+    localStorage.setItem('user', JSON.stringify(data.user));
+    setToken(data.token);
+    setUser(data.user);
   }
 
   async function register(username, email, password) {
@@ -40,17 +42,17 @@ export function AuthProvider({ children }) {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ username, email, password }),
-    })
+    });
     if (!res.ok) {
-      const err = await res.json()
-      const msg = Object.values(err).flat().join(' ')
-      throw new Error(msg || 'Registration failed')
+      const err = await res.json();
+      const msg = Object.values(err).flat().join(' ');
+      throw new Error(msg || 'Registration failed');
     }
-    const data = await res.json()
-    localStorage.setItem('token', data.token)
-    localStorage.setItem('user', JSON.stringify(data.user))
-    setToken(data.token)
-    setUser(data.user)
+    const data = await res.json();
+    localStorage.setItem('token', data.token);
+    localStorage.setItem('user', JSON.stringify(data.user));
+    setToken(data.token);
+    setUser(data.user);
   }
 
   async function logout() {
@@ -58,9 +60,9 @@ export function AuthProvider({ children }) {
       await fetch(`${BASE_URL}/api/auth/logout/`, {
         method: 'POST',
         headers: { Authorization: `Token ${token}` },
-      })
+      });
     } catch { /* server logout is best-effort */ }
-    _clearAuth()
+    _clearAuth();
   }
 
   /**
@@ -81,16 +83,16 @@ export function AuthProvider({ children }) {
         current_password: currentPassword,
         new_password: newPassword,
       }),
-    })
+    });
     if (!res.ok) {
-      const err = await res.json()
-      const msg = Array.isArray(err.error) ? err.error.join(' ') : (err.error || 'Password change failed')
-      throw new Error(msg)
+      const err = await res.json();
+      const msg = Array.isArray(err.error) ? err.error.join(' ') : (err.error || 'Password change failed');
+      throw new Error(msg);
     }
-    const data = await res.json()
+    const data = await res.json();
     // Store the fresh token so the user stays authenticated
-    localStorage.setItem('token', data.token)
-    setToken(data.token)
+    localStorage.setItem('token', data.token);
+    setToken(data.token);
   }
 
   /**
@@ -106,20 +108,20 @@ export function AuthProvider({ children }) {
         ...(options.headers || {}),
         Authorization: `Token ${token}`,
       },
-    })
+    });
     if (res.status === 401) {
-      _clearAuth()
+      _clearAuth();
     }
-    return res
+    return res;
   }
 
   return (
     <AuthContext.Provider value={{ token, user, login, register, logout, changePassword, authFetch }}>
       {children}
     </AuthContext.Provider>
-  )
+  );
 }
 
 export function useAuth() {
-  return useContext(AuthContext)
+  return useContext(AuthContext);
 }
