@@ -21,7 +21,7 @@ function formatDateSeparator(date) {
 }
 
 export default function Conversation({ otherUser, onBack, onUnmatch }) {
-  const { token, user, authFetch } = useAuth();
+  const { user, authFetch } = useAuth();
   const [messages, setMessages] = useState([]);
   const [text, setText] = useState('');
   const [sending, setSending] = useState(false);

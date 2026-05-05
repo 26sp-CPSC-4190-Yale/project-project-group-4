@@ -5,10 +5,9 @@ import { useAuth } from '../context/AuthContext';
 import { BASE_URL } from '../lib/constants';
 
 export default function Profile() {
-  const { token, user, login, changePassword, authFetch } = useAuth();
+  const { token, user, changePassword, authFetch } = useAuth();
   const [stats, setStats] = useState(null);
   const [bio, setBio] = useState('');
-  const [hasPhoto, setHasPhoto] = useState(false);
   const [photoUrl, setPhotoUrl] = useState(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -37,7 +36,6 @@ export default function Profile() {
         ]);
         setStats(statsData);
         setBio(profileData.bio || '');
-        setHasPhoto(profileData.has_photo);
         if (profileData.has_photo) {
           setPhotoUrl(`${BASE_URL}/api/profile/photo/${user.id}/?t=${Date.now()}`);
         }
@@ -90,7 +88,6 @@ export default function Profile() {
         const data = await res.json();
         throw new Error(data.error || 'Upload failed');
       }
-      setHasPhoto(true);
       setPhotoUrl(`${BASE_URL}/api/profile/photo/${user.id}/?t=${Date.now()}`);
     } catch (e) {
       setError(e.message);

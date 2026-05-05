@@ -6,7 +6,7 @@ import useSwipe from '../hooks/useSwipe';
 import { BASE_URL } from '../lib/constants';
 
 export default function Gallery() {
-  const { token, authFetch } = useAuth();
+  const { authFetch } = useAuth();
   const [artworks, setArtworks] = useState([]);
   const [currentIndex, setCurrentIndex] = useState(0);
   const [error, setError] = useState(null);
