@@ -1,0 +1,41 @@
+from django.urls import path
+from . import views
+
+urlpatterns = [
+    # Auth endpoints
+    path('api/auth/register/', views.register, name='register'),
+    path('api/auth/login/', views.login, name='login'),
+    path('api/auth/logout/', views.logout, name='logout'),
+    path('api/auth/change-password/', views.change_password, name='change_password'),
+
+    # Fetch all artworks (with pagination support)
+    path('api/artworks/', views.artwork_list, name='artwork_list'),
+
+    # Record or undo a like/pass interaction (requires auth)
+    path('api/interactions/', views.record_interaction, name='record_interaction'),
+    path('api/interactions/<int:artwork_id>/', views.delete_interaction, name='delete_interaction'),
+
+    # Get current user's liked artworks (requires auth)
+    path('api/liked/', views.liked_artworks, name='liked_artworks'),
+
+    # Taste profile (requires auth)
+    path('api/taste/me/', views.my_taste, name='my_taste'),
+
+    # Art of the Day (requires auth)
+    path('api/art-of-the-day/', views.daily_artwork, name='daily_artwork'),
+
+    # Matches & messaging
+    path('api/matches/', views.match_list, name='match_list'),
+    path('api/matches/<int:user_id>/action/', views.match_action, name='match_action'),
+    path('api/matches/<int:user_id>/facets/', views.match_facets, name='match_facets'),
+    path('api/matches/<int:user_id>/profile/', views.match_user_profile, name='match_user_profile'),
+    path('api/matches/<int:user_id>/common-likes/', views.common_likes, name='common_likes'),
+    path('api/matches/<int:user_id>/', views.unmatch, name='unmatch'),
+    path('api/messages/<int:user_id>/', views.conversation, name='conversation'),
+    path('api/notifications/', views.notifications, name='notifications'),
+
+    # Profile
+    path('api/profile/stats/', views.profile_stats, name='profile_stats'),
+    path('api/profile/me/', views.user_profile, name='user_profile'),
+    path('api/profile/photo/<int:user_id>/', views.user_photo, name='user_photo'),
+]
