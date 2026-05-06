@@ -77,6 +77,11 @@ install_uv() {
     warn "uv installed but not on PATH. Add ~/.local/bin to PATH and rerun."
     exit 1
   fi
+  # Persist for future interactive shells.
+  if [ -f "$HOME/.bashrc" ] && ! grep -q '/.local/bin' "$HOME/.bashrc"; then
+    echo 'export PATH="$HOME/.local/bin:$PATH"' >> "$HOME/.bashrc"
+    log "Added ~/.local/bin to PATH in ~/.bashrc — open a new shell or run: source ~/.bashrc"
+  fi
 }
 
 setup_postgres() {
@@ -123,7 +128,7 @@ SECRET_KEY=$SECRET
 DEBUG=True
 DATABASE_URL=postgresql://$DB_USER:$DB_PASSWORD@127.0.0.1:5432/$DB_NAME
 ALLOWED_HOSTS=localhost,127.0.0.1
-CORS_ALLOWED_ORIGINS=http://localhost:5173
+CORS_ALLOWED_ORIGINS=http://localhost:5173,http://127.0.0.1:5173
 EOF
 }
 
