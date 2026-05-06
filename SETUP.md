@@ -28,7 +28,7 @@ mkdir -p data
 ./scripts/setup.sh
 ```
 
-When it finishes, in two shells:
+When it finishes, in two *new* shells:
 
 ```bash
 uv run python manage.py runserver 127.0.0.1:8000
@@ -185,27 +185,6 @@ with `--host 0.0.0.0`, add the VM's IP to `ALLOWED_HOSTS`, and point
 
 ## Producing the dump
 
-For reference: the file on Google Drive was made with `./scripts/dump_db.sh`,
-which is just `pg_dump --no-owner --no-privileges --clean --if-exists
+For reference: the file on Google Drive was made with `pg_dump --no-owner --no-privileges --clean --if-exists
 --format=plain` against `$DATABASE_URL`, gzipped. Only relevant if you're
 the one updating it — restoring just needs the file.
-
-## Troubleshooting
-
-**`psql: FATAL: Peer authentication failed for user "yart"`** — pass
-`-h 127.0.0.1` to force TCP. Peer auth only applies on the unix socket.
-
-**`uv sync` fails on `psycopg2-binary`** — `libpq-dev` and/or `python3-dev`
-aren't installed.
-
-**Frontend says "Load failed" on login/register** — almost always CORS.
-Make sure the URL the browser is on (`localhost:5173` vs `127.0.0.1:5173`)
-is listed in `CORS_ALLOWED_ORIGINS`. Restart the backend after editing
-`.env`.
-
-**Frontend hits the wrong API URL after I edited `frontend/.env`** —
-Vite reads env files only at startup. Restart `npm run dev`.
-
-**`pg_dump: server version mismatch`** — install `postgresql-client-17`
-(use the same PGDG snippet from "System packages" above to get the
-matching client).
